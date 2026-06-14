@@ -1,12 +1,5 @@
-class BaseState:
-    def __init__(self, game) -> None:
-        self.game = game
+from controllers.base_scene_controller import BaseSceneController
 
-    def handle_event(self, event) -> None:
-        pass
 
-    def update(self, dt: float) -> None:
-        pass
-
-    def draw(self, surface) -> None:
-        pass
+class BaseState(BaseSceneController):
+    pass

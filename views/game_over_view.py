@@ -1,0 +1,16 @@
+import pygame
+
+from settings import COLORS, SCREEN_HEIGHT, SCREEN_WIDTH
+
+
+class GameOverView:
+    def __init__(self) -> None:
+        self.font = pygame.font.Font(None, 60)
+        self.text_font = pygame.font.Font(None, 30)
+
+    def draw(self, surface) -> None:
+        title = self.font.render("Game Over", True, COLORS["text"])
+        prompt = self.text_font.render("Press Enter to return to menu", True, COLORS["muted_text"])
+
+        surface.blit(title, title.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 30)))
+        surface.blit(prompt, prompt.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 30)))

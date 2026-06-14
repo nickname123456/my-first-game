@@ -1,25 +1,5 @@
-import pygame
-
-from settings import COLORS, SCREEN_HEIGHT, SCREEN_WIDTH
-from states.base_state import BaseState
+from controllers.menu_controller import MenuController
 
 
-class MenuState(BaseState):
-    def __init__(self, game) -> None:
-        super().__init__(game)
-        self.title_font = pygame.font.Font(None, 86)
-        self.text_font = pygame.font.Font(None, 34)
-
-    def handle_event(self, event) -> None:
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
-            self.game.change_state("play")
-
-    def draw(self, surface) -> None:
-        title = self.title_font.render("PM Simulator", True, COLORS["text"])
-        prompt = self.text_font.render("Press Enter to start", True, COLORS["muted_text"])
-
-        title_rect = title.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 60))
-        prompt_rect = prompt.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 20))
-
-        surface.blit(title, title_rect)
-        surface.blit(prompt, prompt_rect)
+class MenuState(MenuController):
+    pass
