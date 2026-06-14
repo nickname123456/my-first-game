@@ -41,50 +41,29 @@ class PlayController(BaseSceneController):
     def _create_employees(self) -> list[EmployeeModel]:
         employee_width = 26
         employee_height = 30
-        return [
-            EmployeeModel(
-                "Anton",
-                "backend",
-                TILE_SIZE * 10 + 7,
-                TILE_SIZE * 6 + 5,
-                employee_width,
-                employee_height,
-                (80, 164, 222),
-            ),
-            EmployeeModel(
-                "Mira",
-                "frontend",
-                TILE_SIZE * 14 + 7,
-                TILE_SIZE * 6 + 5,
-                employee_width,
-                employee_height,
-                (222, 134, 80),
-            ),
-            EmployeeModel(
-                "Lena",
-                "QA",
-                TILE_SIZE * 18 + 7,
-                TILE_SIZE * 6 + 5,
-                employee_width,
-                employee_height,
-                (122, 190, 95),
-            ),
-            EmployeeModel(
-                "Oleg",
-                "DevOps",
-                TILE_SIZE * 10 + 7,
-                TILE_SIZE * 9 + 5,
-                employee_width,
-                employee_height,
-                (185, 128, 220),
-            ),
-            EmployeeModel(
-                "Ilya",
-                "AI",
-                TILE_SIZE * 18 + 7,
-                TILE_SIZE * 11 + 5,
-                employee_width,
-                employee_height,
-                (220, 190, 84),
-            ),
+        employee_specs = [
+            ("Anton", "backend", (11, 3, 2, 3)),
+            ("Mira", "frontend", (15, 3, 2, 3)),
+            ("Lena", "QA", (19, 3, 2, 3)),
+            ("Oleg", "DevOps", (11, 8, 2, 3)),
+            ("Ilya", "AI", (15, 8, 2, 3)),
         ]
+
+        employees = []
+        for name, role, desk in employee_specs:
+            x, y = self._employee_position_left_of_desk(desk, employee_height)
+            employees.append(
+                EmployeeModel(name, role, x, y, employee_width, employee_height)
+            )
+
+        return employees
+
+    def _employee_position_left_of_desk(
+        self,
+        desk: tuple[int, int, int, int],
+        employee_height: int,
+    ) -> tuple[int, int]:
+        desk_left, desk_top, _desk_width, desk_height = desk
+        x = (desk_left - 1) * TILE_SIZE + 7
+        y = desk_top * TILE_SIZE + (desk_height * TILE_SIZE - employee_height) // 2
+        return x, y

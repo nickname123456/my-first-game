@@ -11,7 +11,6 @@ class EmployeeModel:
     y: int
     width: int
     height: int
-    color: tuple[int, int, int]
 
     @property
     def rect(self) -> tuple[int, int, int, int]:
