@@ -12,11 +12,11 @@
 
 - [x] Создать основной запуск через `main.py`.
 - [x] Сделать класс `Game` с игровым циклом, FPS и переключением состояний.
-- [x] Добавить состояния:
-  - [x] `MenuState`;
-  - [x] `PlayState`;
-  - [x] `GameOverState`;
-  - [x] `ResultState`.
+- [x] Добавить контроллеры сцен:
+  - [x] `MenuController`;
+  - [x] `PlayController`;
+  - [x] `GameOverController`;
+  - [x] `ResultController`.
 - [x] Настроить окно `1280x720`.
 - [x] Реализовать игрока:
   - [x] движение через `WASD` и стрелки;

@@ -315,52 +315,29 @@ score = max(0, score)
 
 ```text
 my-first-game/
-├── main.py
-├── game.py
-├── settings.py
-├── controllers/
-│   ├── game_controller.py
-│   ├── player_controller.py
-│   ├── menu_controller.py
-│   ├── play_controller.py
-│   ├── game_over_controller.py
-│   └── result_controller.py
-├── models/
-│   ├── player_model.py
-│   └── office_map_model.py
-├── views/
-│   ├── player_view.py
-│   ├── office_map_view.py
-│   ├── play_view.py
-│   ├── menu_view.py
-│   ├── game_over_view.py
-│   └── result_view.py
-├── entities/
-│   ├── player.py
-│   └── office_map.py
-├── states/
-│   ├── menu_state.py
-│   ├── play_state.py
-│   ├── game_over_state.py
-│   └── result_state.py
-├── managers/
-│   ├── task_manager.py
-│   ├── employee_manager.py
-│   ├── event_manager.py
-│   ├── collision_manager.py
-│   └── resource_manager.py
-├── ui/
-│   ├── hud.py
-│   ├── kanban.py
-│   ├── dialog.py
-│   └── button.py
-└── tests/
-    ├── test_player_model.py
-    ├── test_player_controller.py
-    └── test_office_map_model.py
+|-- main.py
+|-- game.py
+|-- settings.py
+|-- controllers/
+|   |-- game_controller.py
+|   |-- player_controller.py
+|   |-- menu_controller.py
+|   |-- play_controller.py
+|   |-- game_over_controller.py
+|   `-- result_controller.py
+|-- models/
+|   |-- player_model.py
+|   `-- office_map_model.py
+|-- views/
+|   |-- player_view.py
+|   |-- office_map_view.py
+|   |-- play_view.py
+|   |-- menu_view.py
+|   |-- game_over_view.py
+|   `-- result_view.py
+`-- tests/
+    `-- .gitkeep
 ```
-
-Папки `entities/` и `states/` сохранены как совместимые тонкие оболочки над MVC-классами. Активный игровой поток использует `controllers/`, `models/` и `views/`.
 
 ## Роли компонентов
 
