@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from math import floor
+
 from settings import GRID_HEIGHT, GRID_WIDTH, TILE_SIZE
 
 
@@ -34,6 +36,26 @@ class OfficeMapModel:
         if not (0 <= grid_x < self.width and 0 <= grid_y < self.height):
             return False
         return self.grid[grid_y][grid_x] in self.WALKABLE_TILES
+
+    def is_rect_walkable(self, rect: tuple[int, int, int, int]) -> bool:
+        left, top, width, height = rect
+        right = left + width - 1
+        bottom = top + height - 1
+
+        if left < 0 or top < 0:
+            return False
+
+        min_x = floor(left / self.tile_size)
+        max_x = floor(right / self.tile_size)
+        min_y = floor(top / self.tile_size)
+        max_y = floor(bottom / self.tile_size)
+
+        for grid_y in range(min_y, max_y + 1):
+            for grid_x in range(min_x, max_x + 1):
+                if not self.is_walkable(grid_x, grid_y):
+                    return False
+
+        return True
 
     def grid_to_world(self, grid_x: int, grid_y: int) -> tuple[int, int]:
         return grid_x * self.tile_size, grid_y * self.tile_size

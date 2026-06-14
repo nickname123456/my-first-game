@@ -1,5 +1,9 @@
-from models.player_model import PlayerModel
+from math import hypot
+
 import pygame
+
+from models.office_map_model import OfficeMapModel
+from models.player_model import PlayerModel
 
 
 KEY_W = pygame.K_w
@@ -14,8 +18,9 @@ KEY_RIGHT = pygame.K_RIGHT
 
 
 class PlayerController:
-    def __init__(self, model: PlayerModel) -> None:
+    def __init__(self, model: PlayerModel, office_map: OfficeMapModel) -> None:
         self.model = model
+        self.office_map = office_map
 
     def handle_input(self, keys, dt: float) -> None:
         dx = 0
@@ -30,8 +35,38 @@ class PlayerController:
         if self._pressed(keys, KEY_D) or self._pressed(keys, KEY_RIGHT):
             dx += 1
 
-        self.model.move(dx, dy, dt)
+        self._move_with_collisions(dx, dy, dt)
         self.model.request_interaction(self._pressed(keys, KEY_E))
+
+    def _move_with_collisions(self, dx: int, dy: int, dt: float) -> None:
+        length = hypot(dx, dy)
+        if length == 0:
+            return
+
+        normalized_x = dx / length
+        normalized_y = dy / length
+        move_x = round(normalized_x * self.model.speed * dt)
+        move_y = round(normalized_y * self.model.speed * dt)
+
+        if move_x:
+            next_rect = (
+                self.model.x + move_x,
+                self.model.y,
+                self.model.width,
+                self.model.height,
+            )
+            if self.office_map.is_rect_walkable(next_rect):
+                self.model.x += move_x
+
+        if move_y:
+            next_rect = (
+                self.model.x,
+                self.model.y + move_y,
+                self.model.width,
+                self.model.height,
+            )
+            if self.office_map.is_rect_walkable(next_rect):
+                self.model.y += move_y
 
     def _pressed(self, keys, key: int) -> bool:
         try:
