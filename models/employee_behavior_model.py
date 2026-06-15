@@ -273,6 +273,7 @@ class EmployeeBehaviorSystem:
     ) -> None:
         ''' двигает сотрудника по его пути, если он есть'''
         if not employee.path or self._path_finished(employee):
+            employee.set_movement_state(None, False, dt)
             return
 
         target_cell = employee.path[employee.path_index]
@@ -285,8 +286,11 @@ class EmployeeBehaviorSystem:
 
         if distance == 0:
             employee.path_index += 1
+            employee.set_movement_state(None, False, dt)
             return
 
+        previous_x = employee.x
+        previous_y = employee.y
         speed = self._walk_speed(employee)
         step = speed * dt
         if step >= distance:
@@ -296,6 +300,11 @@ class EmployeeBehaviorSystem:
         else:
             employee.x += round(dx / distance * step)
             employee.y += round(dy / distance * step)
+
+        movement_dx = employee.x - previous_x
+        movement_dy = employee.y - previous_y
+        direction = self._direction_from_movement(movement_dx, movement_dy)
+        employee.set_movement_state(direction, movement_dx != 0 or movement_dy != 0, dt)
 
         if employee.state != EMPLOYEE_STATE_RESTING:
             employee.fatigue = min(
@@ -326,3 +335,14 @@ class EmployeeBehaviorSystem:
     def _walk_speed(self, employee: EmployeeModel) -> float:
         fatigue_multiplier = max(0.45, 1.0 - employee.fatigue / 160.0)
         return BASE_WALK_SPEED * fatigue_multiplier
+
+    def _direction_from_movement(self, dx: int, dy: int) -> str | None:
+        if dx == 0 and dy == 0:
+            return None
+        if abs(dx) >= abs(dy):
+            if dx < 0:
+                return "left"
+            return "right"
+        if dy < 0:
+            return "up"
+        return "down"

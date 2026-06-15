@@ -31,6 +31,9 @@ class EmployeeModel:
     task_picked_up: bool = False
     ready_to_work: bool = False
     needs_help: bool = False
+    direction: str = "down"
+    is_moving: bool = False
+    animation_time: float = 0.0
 
     @property
     def rect(self) -> tuple[int, int, int, int]:
@@ -39,3 +42,13 @@ class EmployeeModel:
     @property
     def is_busy(self) -> bool:
         return self.current_task_id is not None
+
+    def set_movement_state(self, direction: str | None, is_moving: bool, dt: float) -> None:
+        if direction is not None:
+            self.direction = direction
+
+        self.is_moving = is_moving
+        if is_moving:
+            self.animation_time += dt
+        else:
+            self.animation_time = 0.0

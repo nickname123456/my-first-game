@@ -64,3 +64,34 @@ def test_behavior_tree_selects_rest_when_fatigue_is_high() -> None:
     assert employee.state == EMPLOYEE_STATE_RESTING
     assert employee.ready_to_work is False
     assert employee.target_cell == office_map.kitchen_target
+
+
+def test_employee_animation_tracks_real_path_movement() -> None:
+    office_map = OfficeMapModel()
+    employee = make_employee(office_map)
+    work_cell = employee.work_cell
+    assert work_cell is not None
+    employee.path = [work_cell, (work_cell[0] - 1, work_cell[1])]
+    employee.path_index = 1
+    behavior = EmployeeBehaviorSystem(random.Random(1))
+
+    behavior._move_along_path(employee, office_map, 0.1)
+
+    assert employee.is_moving is True
+    assert employee.direction == "left"
+    assert employee.animation_time > 0.0
+
+
+def test_employee_animation_stops_without_path() -> None:
+    office_map = OfficeMapModel()
+    employee = make_employee(office_map)
+    employee.direction = "left"
+    employee.is_moving = True
+    employee.animation_time = 1.0
+    behavior = EmployeeBehaviorSystem(random.Random(1))
+
+    behavior._move_along_path(employee, office_map, 0.1)
+
+    assert employee.is_moving is False
+    assert employee.direction == "left"
+    assert employee.animation_time == 0.0
