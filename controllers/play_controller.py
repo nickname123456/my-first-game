@@ -125,11 +125,11 @@ class PlayController(BaseSceneController):
         employee_width = 26
         employee_height = 30
         employee_specs = [
-            ("Anton", "backend", (11, 3, 2, 3)),
-            ("Mira", "frontend", (15, 3, 2, 3)),
-            ("Lena", "QA", (19, 3, 2, 3)),
-            ("Oleg", "DevOps", (11, 8, 2, 3)),
-            ("Ilya", "AI", (15, 8, 2, 3)),
+            ("Яков", "backend", (11, 3, 2, 3)),
+            ("Кира", "frontend", (15, 3, 2, 3)),
+            ("Шура", "QA", (19, 3, 2, 3)),
+            ("Тимур", "DevOps", (11, 8, 2, 3)),
+            ("Алик", "AI", (15, 8, 2, 3)),
         ]
 
         employees = []

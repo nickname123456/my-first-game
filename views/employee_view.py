@@ -40,13 +40,13 @@ class EmployeeView:
                 task = task_manager.get_task(employee.current_task_id)
                 if task is not None:
                     progress = self.small_font.render(
-                        f"busy {int(task.progress)}%",
+                        f"занят {int(task.progress)}%",
                         True,
                         COLORS["text"],
                     )
                     progress_rect = progress.get_rect(center=(rect.centerx, rect.bottom + 9))
                     surface.blit(progress, progress_rect)
             else:
-                state = self.small_font.render("free", True, COLORS["muted_text"])
+                state = self.small_font.render("свободен", True, COLORS["muted_text"])
                 state_rect = state.get_rect(center=(rect.centerx, rect.bottom + 9))
                 surface.blit(state, state_rect)

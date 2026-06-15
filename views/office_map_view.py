@@ -2,11 +2,12 @@ import pygame
 
 from models.office_map_model import OfficeMapModel
 from settings import COLORS
+from views.font_utils import get_ui_font
 
 
 class OfficeMapView:
     def __init__(self) -> None:
-        self.font = pygame.font.Font(None, 24)
+        self.font = get_ui_font(24)
 
     def draw(self, surface, model: OfficeMapModel) -> None:
         for y, row in enumerate(model.grid):

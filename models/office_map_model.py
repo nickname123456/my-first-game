@@ -26,10 +26,10 @@ class OfficeMapModel:
         self.height = height
         self.grid = self._build_grid()
         self.zone_labels = [
-            ("Work Zone", (15, 4)),
-            ("Kitchen", (4, 14)),
-            ("Meeting", (25, 13)),
-            ("Kanban", (4, 3)),
+            ("Рабочая зона", (15, 4)),
+            ("Кухня", (4, 14)),
+            ("Переговорка", (25, 13)),
+            ("Канбан", (4, 3)),
         ]
 
     def is_walkable(self, grid_x: int, grid_y: int) -> bool:

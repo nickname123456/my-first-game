@@ -71,7 +71,7 @@ class KanbanView:
         pygame.draw.rect(surface, assign_color, self.assign_rect, border_radius=4)
         self._draw_text(
             surface,
-            "Назначить Enter",
+            "Назначить: Enter",
             self.font,
             self.assign_rect.x + 46,
             self.assign_rect.y + 9,
@@ -123,8 +123,8 @@ class KanbanView:
 
             title = f"{task.id}. {task.title}"
             meta = (
-                f"{task.required_skill} | d:{task.difficulty} | value:{task.business_value} "
-                f"| deadline:{int(task.deadline)}s | {int(task.progress)}%"
+                f"{task.required_skill} | сложн.:{task.difficulty} | ценность:{task.business_value} "
+                f"| срок:{int(task.deadline)}с | {int(task.progress)}%"
             )
             if task.status == TASK_STATUS_IN_PROGRESS:
                 meta += f" | {task.assigned_employee}"
