@@ -35,18 +35,21 @@ class PlayerController:
         if self._pressed(keys, KEY_D) or self._pressed(keys, KEY_RIGHT):
             dx += 1
 
-        self._move_with_collisions(dx, dy, dt)
+        direction = self._direction_from_input(dx, dy)
+        moved = self._move_with_collisions(dx, dy, dt)
+        self.model.set_movement_state(direction, moved, dt)
         self.model.request_interaction(self._pressed(keys, KEY_E))
 
-    def _move_with_collisions(self, dx: int, dy: int, dt: float) -> None:
+    def _move_with_collisions(self, dx: int, dy: int, dt: float) -> bool:
         length = hypot(dx, dy)
         if length == 0:
-            return
+            return False
 
         normalized_x = dx / length
         normalized_y = dy / length
         move_x = round(normalized_x * self.model.speed * dt)
         move_y = round(normalized_y * self.model.speed * dt)
+        moved = False
 
         if move_x:
             next_rect = (
@@ -57,6 +60,7 @@ class PlayerController:
             )
             if self.office_map.is_rect_walkable(next_rect):
                 self.model.x += move_x
+                moved = True
 
         if move_y:
             next_rect = (
@@ -67,6 +71,20 @@ class PlayerController:
             )
             if self.office_map.is_rect_walkable(next_rect):
                 self.model.y += move_y
+                moved = True
+
+        return moved
+
+    def _direction_from_input(self, dx: int, dy: int) -> str | None:
+        if dx < 0:
+            return "left"
+        if dx > 0:
+            return "right"
+        if dy < 0:
+            return "up"
+        if dy > 0:
+            return "down"
+        return None
 
     def _pressed(self, keys, key: int) -> bool:
         try:
