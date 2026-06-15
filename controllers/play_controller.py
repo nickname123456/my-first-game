@@ -1,6 +1,7 @@
 import pygame
 
 from controllers.base_scene_controller import BaseSceneController
+from models.employee_behavior_model import EmployeeBehaviorSystem
 from controllers.player_controller import PlayerController
 from models.employee_model import EmployeeModel
 from models.office_map_model import OfficeMapModel
@@ -24,6 +25,7 @@ class PlayController(BaseSceneController):
         )
         self.player_controller = PlayerController(self.player, self.office_map)
         self.employees = self._create_employees()
+        self.employee_behavior = EmployeeBehaviorSystem()
         self.project_stats = ProjectStatsModel()
         self.task_manager = TaskManager(
             release_duration=self.project_stats.release_time_left,
@@ -51,6 +53,7 @@ class PlayController(BaseSceneController):
             0.0,
             self.project_stats.release_time_left - dt,
         )
+        self.employee_behavior.update(dt, self.employees, self.office_map)
         self.task_manager.update(dt, self.employees, self.project_stats)
 
         if not self.kanban_open:
@@ -134,21 +137,38 @@ class PlayController(BaseSceneController):
 
         employees = []
         for name, role, desk in employee_specs:
-            x, y = self._employee_position_left_of_desk(desk, employee_height)
+            work_cell = self._employee_cell_left_of_desk(desk)
+            x, y = self._employee_position_for_cell(work_cell, employee_width, employee_height)
             employees.append(
-                EmployeeModel(name, role, x, y, employee_width, employee_height)
+                EmployeeModel(
+                    name,
+                    role,
+                    x,
+                    y,
+                    employee_width,
+                    employee_height,
+                    work_cell=work_cell,
+                )
             )
 
         return employees
 
-    def _employee_position_left_of_desk(
+    def _employee_cell_left_of_desk(
         self,
         desk: tuple[int, int, int, int],
-        employee_height: int,
     ) -> tuple[int, int]:
         desk_left, desk_top, _desk_width, desk_height = desk
-        x = (desk_left - 1) * TILE_SIZE + 7
-        y = desk_top * TILE_SIZE + (desk_height * TILE_SIZE - employee_height) // 2
+        return desk_left - 1, desk_top + desk_height // 2
+
+    def _employee_position_for_cell(
+        self,
+        cell: tuple[int, int],
+        employee_width: int,
+        employee_height: int,
+    ) -> tuple[int, int]:
+        center_x, center_y = self.office_map.grid_to_center(*cell)
+        x = center_x - employee_width // 2
+        y = center_y - employee_height // 2
         return x, y
 
     def _open_kanban(self) -> None:

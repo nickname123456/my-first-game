@@ -3,7 +3,14 @@ from __future__ import annotations
 import heapq
 from dataclasses import dataclass
 
-from models.employee_model import EmployeeModel
+from models.employee_model import (
+    EMPLOYEE_STATE_BURNOUT,
+    EMPLOYEE_STATE_IDLE,
+    EMPLOYEE_STATE_NEEDS_HELP,
+    EMPLOYEE_STATE_RESTING,
+    EMPLOYEE_STATE_WORKING,
+    EmployeeModel,
+)
 from models.project_stats_model import ProjectStatsModel
 from models.task_model import (
     TASK_STATUS_DONE,
@@ -91,6 +98,12 @@ class TaskManager:
         task.assigned_employee = employee.name
         employee.current_task_id = task.id
         employee.task_progress_speed = self._calculate_progress_speed(task, employee)
+        employee.task_picked_up = False
+        employee.ready_to_work = False
+        employee.state = EMPLOYEE_STATE_IDLE
+        employee.target_cell = None
+        employee.path = []
+        employee.path_index = 0
         return True
 
     def get_task(self, task_id: int) -> Task | None:
@@ -177,7 +190,13 @@ class TaskManager:
                 self._release_employee(employee)
                 continue
 
-            task.progress = min(100.0, task.progress + employee.task_progress_speed * dt)
+            if employee.state != EMPLOYEE_STATE_WORKING or not employee.ready_to_work:
+                continue
+
+            speed_multiplier = max(0.40, 1.0 - employee.fatigue / 130.0)
+            progress_delta = employee.task_progress_speed * speed_multiplier * dt
+            task.progress = min(100.0, task.progress + progress_delta)
+            employee.fatigue = min(100.0, employee.fatigue + 3.5 * dt)
             if task.progress >= 100.0:
                 task.status = TASK_STATUS_DONE
                 self._release_employee(employee)
@@ -213,6 +232,17 @@ class TaskManager:
     def _release_employee(self, employee: EmployeeModel) -> None:
         employee.current_task_id = None
         employee.task_progress_speed = 0.0
+        employee.task_picked_up = False
+        employee.ready_to_work = False
+        employee.target_cell = None
+        employee.path = []
+        employee.path_index = 0
+        if employee.state not in (
+            EMPLOYEE_STATE_BURNOUT,
+            EMPLOYEE_STATE_NEEDS_HELP,
+            EMPLOYEE_STATE_RESTING,
+        ):
+            employee.state = EMPLOYEE_STATE_IDLE
 
     def _build_task_pool(self) -> list[TaskTemplate]:
         return [

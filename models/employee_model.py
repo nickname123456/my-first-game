@@ -3,6 +3,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 
+EMPLOYEE_STATE_IDLE = "idle"
+EMPLOYEE_STATE_GOING_TO_KANBAN = "going_to_kanban"
+EMPLOYEE_STATE_GOING_TO_WORK = "going_to_work"
+EMPLOYEE_STATE_WORKING = "working"
+EMPLOYEE_STATE_RESTING = "resting"
+EMPLOYEE_STATE_NEEDS_HELP = "needs_help"
+EMPLOYEE_STATE_BURNOUT = "burnout"
+
+
 @dataclass
 class EmployeeModel:
     name: str
@@ -13,6 +22,15 @@ class EmployeeModel:
     height: int
     current_task_id: int | None = None
     task_progress_speed: float = 0.0
+    state: str = EMPLOYEE_STATE_IDLE
+    fatigue: float = 0.0
+    target_cell: tuple[int, int] | None = None
+    path: list[tuple[int, int]] | None = None
+    path_index: int = 0
+    work_cell: tuple[int, int] | None = None
+    task_picked_up: bool = False
+    ready_to_work: bool = False
+    needs_help: bool = False
 
     @property
     def rect(self) -> tuple[int, int, int, int]:

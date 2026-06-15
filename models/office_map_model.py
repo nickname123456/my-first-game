@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import deque
 from math import floor
 
 from settings import GRID_HEIGHT, GRID_WIDTH, TILE_SIZE
@@ -31,11 +32,38 @@ class OfficeMapModel:
             ("Переговорка", (25, 13)),
             ("Канбан", (4, 3)),
         ]
+        self.kanban_target = (5, 3)
+        self.kitchen_target = (5, 14)
+        self.meeting_target = (26, 13)
+        self.wander_targets = [
+            (5, 6),
+            (9, 8),
+            (14, 14),
+            (24, 7),
+            self.kitchen_target,
+            self.meeting_target,
+            self.kanban_target,
+        ]
 
     def is_walkable(self, grid_x: int, grid_y: int) -> bool:
         if not (0 <= grid_x < self.width and 0 <= grid_y < self.height):
             return False
         return self.grid[grid_y][grid_x] in self.WALKABLE_TILES
+
+    def neighbors(self, cell: tuple[int, int]) -> list[tuple[int, int]]:
+        grid_x, grid_y = cell
+        result = []
+
+        for offset_x, offset_y in ((0, -1), (1, 0), (0, 1), (-1, 0)):
+            next_x = grid_x + offset_x
+            next_y = grid_y + offset_y
+            if self.is_walkable(next_x, next_y):
+                result.append((next_x, next_y))
+
+        return result
+
+    def cell_cost(self, cell: tuple[int, int]) -> float:
+        return 1.0
 
     def is_rect_walkable(self, rect: tuple[int, int, int, int]) -> bool:
         left, top, width, height = rect
@@ -59,6 +87,44 @@ class OfficeMapModel:
 
     def grid_to_world(self, grid_x: int, grid_y: int) -> tuple[int, int]:
         return grid_x * self.tile_size, grid_y * self.tile_size
+
+    def grid_to_center(self, grid_x: int, grid_y: int) -> tuple[int, int]:
+        return (
+            grid_x * self.tile_size + self.tile_size // 2,
+            grid_y * self.tile_size + self.tile_size // 2,
+        )
+
+    def world_to_grid(self, world_x: int | float, world_y: int | float) -> tuple[int, int]:
+        return floor(world_x / self.tile_size), floor(world_y / self.tile_size)
+
+    # найти ближайшую точку, куда можно встать, если дано место, куда встать нельзя
+    def find_nearest_walkable(self, start: tuple[int, int]) -> tuple[int, int] | None:
+        # если стартовая точка уже проходимая, то и думать не надо
+        if self.is_walkable(*start):
+            return start
+
+        queue = deque([start]) # очередь для обхода в ширину
+        visited = {start} # пройденные клетки
+
+        while queue:
+            grid_x, grid_y = queue.popleft() # взять следующую клетку из очереди (самую близкую к старту)
+
+            for offset_x, offset_y in ((0, -1), (1, 0), (0, 1), (-1, 0)):
+                next_cell = (grid_x + offset_x, grid_y + offset_y)
+                if next_cell in visited:
+                    continue
+
+                visited.add(next_cell)
+                next_x, next_y = next_cell
+                if not (0 <= next_x < self.width and 0 <= next_y < self.height): # проверить, что клетка в пределах карты
+                    continue
+
+                if self.is_walkable(next_x, next_y): # если клетка норм - берем ее
+                    return next_cell
+
+                queue.append(next_cell)
+
+        return None
 
     def _build_grid(self) -> list[list[str]]:
         # залить карту полом
