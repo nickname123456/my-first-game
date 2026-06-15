@@ -30,3 +30,55 @@ COLORS = {
     "muted_text": (176, 184, 194),
     "accent": (97, 174, 239),
 }
+
+OFFICE_MAP_LAYOUT = {
+    "zones": [
+        {"left": 2, "top": 2, "width": 6, "height": 3, "tile": "kanban"},
+        {"left": 1, "top": 11, "width": 14, "height": 6, "tile": "kitchen"},
+        {"left": 16, "top": 11, "width": 15, "height": 6, "tile": "meeting"},
+    ],
+    "walls": [
+        {"left": 0, "top": 0, "width": GRID_WIDTH, "height": 1},
+        {"left": 0, "top": GRID_HEIGHT - 1, "width": GRID_WIDTH, "height": 1},
+        {"left": 0, "top": 0, "width": 1, "height": GRID_HEIGHT},
+        {"left": GRID_WIDTH - 1, "top": 0, "width": 1, "height": GRID_HEIGHT},
+        {"left": 1, "top": 1, "width": GRID_WIDTH - 2, "height": 1},
+        {"left": 1, "top": 11, "width": 15, "height": 1},
+        {"left": 15, "top": 11, "width": 16, "height": 1},
+        {"left": 15, "top": 11, "width": 1, "height": 6},
+    ],
+    "openings": [
+        {"left": 6, "top": 11, "width": 2, "height": 1, "tile": "kitchen"},
+        {"left": 15, "top": 13, "width": 1, "height": 2, "tile": "floor"},
+        {"left": 23, "top": 11, "width": 2, "height": 1, "tile": "meeting"},
+    ],
+    "furniture": [
+        {"left": 11, "top": 2, "width": 2, "height": 3, "tile": "desk"},
+        {"left": 15, "top": 2, "width": 2, "height": 3, "tile": "desk"},
+        {"left": 19, "top": 2, "width": 2, "height": 3, "tile": "desk"},
+        {"left": 11, "top": 8, "width": 2, "height": 3, "tile": "desk"},
+        {"left": 15, "top": 8, "width": 2, "height": 3, "tile": "desk"},
+        {"left": 19, "top": 8, "width": 2, "height": 3, "tile": "desk"},
+        {"left": 1, "top": 12, "width": 1, "height": 5, "tile": "desk"},
+    ],
+    "labels": [
+        ("Рабочая зона", (15, 6)),
+        ("Кухня", (8, 14)),
+        ("Переговорка", (22, 14)),
+        ("Канбан", (4, 3)),
+    ],
+    "targets": {
+        "kanban": (5, 3),
+        "kitchen": (7, 13),
+        "meeting": (23, 13),
+    },
+    "wander_targets": [
+        (5, 6),
+        (9, 8),
+        (14, 14),
+        (24, 7),
+        "kitchen",
+        "meeting",
+        "kanban",
+    ],
+}

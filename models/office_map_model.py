@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from collections import deque
 from math import floor
+from typing import Any
 
-from settings import GRID_HEIGHT, GRID_WIDTH, TILE_SIZE
+from settings import GRID_HEIGHT, GRID_WIDTH, OFFICE_MAP_LAYOUT, TILE_SIZE
 
 
 class OfficeMapModel:
@@ -25,24 +26,17 @@ class OfficeMapModel:
         self.tile_size = tile_size
         self.width = width
         self.height = height
+        self.layout = OFFICE_MAP_LAYOUT
         self.grid = self._build_grid()
-        self.zone_labels = [
-            ("Рабочая зона", (15, 4)),
-            ("Кухня", (4, 14)),
-            ("Переговорка", (25, 13)),
-            ("Канбан", (4, 3)),
-        ]
-        self.kanban_target = (5, 3)
-        self.kitchen_target = (5, 14)
-        self.meeting_target = (26, 13)
+
+        targets = self.layout["targets"]
+        self.zone_labels = self.layout["labels"]
+        self.kanban_target = targets["kanban"]
+        self.kitchen_target = targets["kitchen"]
+        self.meeting_target = targets["meeting"]
         self.wander_targets = [
-            (5, 6),
-            (9, 8),
-            (14, 14),
-            (24, 7),
-            self.kitchen_target,
-            self.meeting_target,
-            self.kanban_target,
+            targets[target] if isinstance(target, str) else target
+            for target in self.layout["wander_targets"]
         ]
 
     def is_walkable(self, grid_x: int, grid_y: int) -> bool:
@@ -127,46 +121,34 @@ class OfficeMapModel:
         return None
 
     def _build_grid(self) -> list[list[str]]:
-        # залить карту полом
-        # первый цикл - сделать строку
-        # второй цикл - растянуть
         grid = [[self.FLOOR for _ in range(self.width)] for _ in range(self.height)]
 
-        # обложить карту стенами сверху, снизу
-        for x in range(self.width):
-            grid[0][x] = self.WALL
-            grid[self.height - 1][x] = self.WALL
-        # обложить карту стенами слева, справа
-        for y in range(self.height):
-            grid[y][0] = self.WALL
-            grid[y][self.width - 1] = self.WALL
-
-        # добавить зоны
-        self._fill_rect(grid, 2, 12, 8, 5, self.KITCHEN)
-        self._fill_rect(grid, 24, 11, 6, 5, self.MEETING)
-        self._fill_rect(grid, 2, 2, 6, 3, self.KANBAN)
-
-        # добавить столы
-        self._fill_rect(grid, 11, 3, 2, 3, self.DESK)
-        self._fill_rect(grid, 15, 3, 2, 3, self.DESK)
-        self._fill_rect(grid, 19, 3, 2, 3, self.DESK)
-        self._fill_rect(grid, 11, 8, 2, 3, self.DESK)
-        self._fill_rect(grid, 15, 8, 2, 3, self.DESK)
-        self._fill_rect(grid, 19, 8, 2, 3, self.DESK)
-
-        # добавить стены внутри офиса
-        for x in range(9, 23):
-            grid[1][x] = self.WALL
-        for y in range(10, 17):
-            grid[y][22] = self.WALL
-        for x in range(2, 10):
-            grid[11][x] = self.WALL
-        
-        # добавить проходы
-        grid[11][5] = self.FLOOR
-        grid[11][6] = self.FLOOR
+        for section, default_tile in (
+            ("zones", self.FLOOR),
+            ("furniture", self.DESK),
+            ("walls", self.WALL),
+            ("openings", self.FLOOR),
+        ):
+            for rect in self.layout[section]:
+                self._fill_layout_rect(grid, rect, default_tile)
 
         return grid
+
+    def _fill_layout_rect(
+        self,
+        grid: list[list[str]],
+        rect: dict[str, Any],
+        default_tile: str,
+    ) -> None:
+        tile = rect.get("tile", default_tile)
+        self._fill_rect(
+            grid,
+            int(rect["left"]),
+            int(rect["top"]),
+            int(rect["width"]),
+            int(rect["height"]),
+            str(tile),
+        )
 
     def _fill_rect(
         self,
