@@ -134,17 +134,15 @@ class PlayController(BaseSceneController):
     def _create_employees(self) -> list[EmployeeModel]:
         employee_width = CHARACTER_HITBOX_WIDTH
         employee_height = CHARACTER_HITBOX_HEIGHT
-        employee_specs = [
-            ("Яков", "backend", (11, 3, 2, 3)),
-            ("Кира", "frontend", (15, 3, 2, 3)),
-            ("Шура", "QA", (19, 3, 2, 3)),
-            ("Тимур", "DevOps", (11, 8, 2, 3)),
-            ("Алик", "AI", (15, 8, 2, 3)),
-        ]
-
         employees = []
-        for name, role, desk in employee_specs:
-            work_cell = self._employee_cell_left_of_desk(desk)
+        for name, role in (
+            ("Яков", "backend"),
+            ("Кира", "frontend"),
+            ("Шура", "QA"),
+            ("Тимур", "DevOps"),
+            ("Алик", "AI"),
+        ):
+            work_cell = self.office_map.workplace_targets[role]
             x, y = self._employee_position_for_cell(work_cell, employee_width, employee_height)
             employees.append(
                 EmployeeModel(
@@ -159,14 +157,6 @@ class PlayController(BaseSceneController):
             )
 
         return employees
-
-    def _employee_cell_left_of_desk(
-        self,
-        desk: tuple[int, int, int, int],
-    ) -> tuple[int, int]:
-        desk_left, desk_top, _desk_width, desk_height = desk
-        return desk_left - 1, desk_top + desk_height // 2
-
     def _employee_position_for_cell(
         self,
         cell: tuple[int, int],

@@ -3,6 +3,8 @@ import random
 from models.employee_behavior_model import EmployeeBehaviorSystem
 from models.employee_model import (
     EMPLOYEE_STATE_GOING_TO_KANBAN,
+    EMPLOYEE_STATE_GOING_TO_WORK,
+    EMPLOYEE_STATE_NEEDS_HELP,
     EMPLOYEE_STATE_RESTING,
     EMPLOYEE_STATE_WORKING,
     EmployeeModel,
@@ -64,6 +66,48 @@ def test_behavior_tree_selects_rest_when_fatigue_is_high() -> None:
     assert employee.state == EMPLOYEE_STATE_RESTING
     assert employee.ready_to_work is False
     assert employee.target_cell == office_map.kitchen_target
+
+
+def test_behavior_tree_sends_employee_with_crisis_to_meeting() -> None:
+    office_map = OfficeMapModel()
+    employee = make_employee(office_map)
+    employee.current_task_id = 1
+    employee.task_picked_up = True
+    employee.fatigue = 90.0
+    employee.needs_help = True
+    behavior = EmployeeBehaviorSystem(random.Random(1))
+
+    behavior.update_employee(0.0, employee, office_map)
+
+    assert employee.state == EMPLOYEE_STATE_NEEDS_HELP
+    assert employee.ready_to_work is False
+    assert employee.target_cell == office_map.meeting_target
+
+
+def test_employee_waits_in_meeting_until_help_flag_is_cleared() -> None:
+    office_map = OfficeMapModel()
+    employee = make_employee(office_map)
+    meeting_x, meeting_y = office_map.grid_to_center(*office_map.meeting_target)
+    employee.x = meeting_x - employee.width // 2
+    employee.y = meeting_y - employee.height // 2
+    employee.current_task_id = 1
+    employee.task_picked_up = True
+    employee.needs_help = True
+    behavior = EmployeeBehaviorSystem(random.Random(1))
+
+    behavior.update_employee(0.0, employee, office_map)
+
+    assert employee.state == EMPLOYEE_STATE_NEEDS_HELP
+    assert employee.ready_to_work is False
+    assert employee.path == []
+    assert employee.target_cell is None
+
+    employee.needs_help = False
+    behavior.update_employee(0.0, employee, office_map)
+
+    assert employee.state == EMPLOYEE_STATE_GOING_TO_WORK
+    assert employee.ready_to_work is False
+    assert employee.target_cell == employee.work_cell
 
 
 def test_employee_animation_tracks_real_path_movement() -> None:

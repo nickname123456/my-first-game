@@ -11,11 +11,12 @@ class OfficeMapModel:
     FLOOR = "floor"
     WALL = "wall"
     DESK = "desk"
+    WORKPLACE = "workplace"
     KITCHEN = "kitchen"
     MEETING = "meeting"
     KANBAN = "kanban"
 
-    WALKABLE_TILES = {FLOOR, KITCHEN, MEETING, KANBAN}
+    WALKABLE_TILES = {FLOOR, WORKPLACE, KITCHEN, MEETING, KANBAN}
 
     def __init__(
         self,
@@ -34,6 +35,7 @@ class OfficeMapModel:
         self.kanban_target = targets["kanban"]
         self.kitchen_target = targets["kitchen"]
         self.meeting_target = targets["meeting"]
+        self.workplace_targets = self._build_workplace_targets()
         self.wander_targets = [
             targets[target] if isinstance(target, str) else target
             for target in self.layout["wander_targets"]
@@ -126,6 +128,7 @@ class OfficeMapModel:
         for section, default_tile in (
             ("zones", self.FLOOR),
             ("furniture", self.DESK),
+            ("workplaces", self.WORKPLACE),
             ("walls", self.WALL),
             ("openings", self.FLOOR),
         ):
@@ -133,6 +136,15 @@ class OfficeMapModel:
                 self._fill_layout_rect(grid, rect, default_tile)
 
         return grid
+
+    def _build_workplace_targets(self) -> dict[str, tuple[int, int]]:
+        workplaces = {}
+
+        for rect in self.layout["workplaces"]:
+            role = str(rect["role"])
+            workplaces[role] = (int(rect["left"]), int(rect["top"]))
+
+        return workplaces
 
     def _fill_layout_rect(
         self,

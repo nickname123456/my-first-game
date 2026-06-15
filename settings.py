@@ -20,6 +20,7 @@ COLORS = {
     "floor": (50, 56, 64),
     "wall": (25, 27, 31),
     "desk": (126, 88, 55),
+    "workplace": (75, 92, 108),
     "kitchen": (69, 132, 112),
     "meeting": (82, 92, 145),
     "kanban": (158, 124, 44),
@@ -60,6 +61,13 @@ OFFICE_MAP_LAYOUT = {
         {"left": 15, "top": 8, "width": 2, "height": 3, "tile": "desk"},
         {"left": 19, "top": 8, "width": 2, "height": 3, "tile": "desk"},
         {"left": 1, "top": 12, "width": 1, "height": 5, "tile": "desk"},
+    ],
+    "workplaces": [
+        {"role": "backend", "left": 10, "top": 3, "width": 1, "height": 1, "tile": "workplace"},
+        {"role": "frontend", "left": 14, "top": 3, "width": 1, "height": 1, "tile": "workplace"},
+        {"role": "QA", "left": 18, "top": 3, "width": 1, "height": 1, "tile": "workplace"},
+        {"role": "DevOps", "left": 10, "top": 9, "width": 1, "height": 1, "tile": "workplace"},
+        {"role": "AI", "left": 14, "top": 9, "width": 1, "height": 1, "tile": "workplace"},
     ],
     "labels": [
         ("Рабочая зона", (15, 6)),

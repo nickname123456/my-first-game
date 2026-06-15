@@ -11,6 +11,7 @@ class OfficeMapView:
         OfficeMapModel.KITCHEN,
         OfficeMapModel.MEETING,
         OfficeMapModel.KANBAN,
+        OfficeMapModel.WORKPLACE,
     }
 
     def __init__(self) -> None:
@@ -60,6 +61,17 @@ class OfficeMapView:
         if tile == OfficeMapModel.FLOOR and (grid_x * 3 + grid_y * 5) % 11 == 0:
             accent_rect = pygame.Rect(rect.left + 8, rect.top + 8, 4, 4)
             pygame.draw.rect(surface, self._shift_color(base_color, 22), accent_rect)
+
+        if tile == OfficeMapModel.WORKPLACE:
+            marker_rect = rect.inflate(-18, -18)
+            pygame.draw.rect(surface, self._shift_color(base_color, 35), marker_rect, 2)
+            pygame.draw.line(
+                surface,
+                self._shift_color(base_color, 45),
+                marker_rect.midleft,
+                marker_rect.midright,
+                2,
+            )
 
     def _draw_solid_tile(
         self,

@@ -171,6 +171,9 @@ class EmployeeBehaviorSystem:
         employee.state = EMPLOYEE_STATE_NEEDS_HELP
         employee.ready_to_work = False
         self._set_destination(employee, context.office_map, context.office_map.meeting_target)
+        if self._is_at_cell(employee, context.office_map.meeting_target, context.office_map):
+            employee.path = []
+            employee.target_cell = None
         return BT_RUNNING
 
     def _rest(self, context: EmployeeBehaviorContext) -> str:
