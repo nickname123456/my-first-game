@@ -3,7 +3,7 @@ from pathlib import Path
 import pygame
 
 from models.player_model import PlayerModel
-from settings import COLORS
+from settings import COLORS, PLAYER_SPRITE_SIZE
 
 
 class PlayerView:
@@ -11,7 +11,7 @@ class PlayerView:
     FRAME_ROWS = 4
     FRAME_WIDTH = 64
     FRAME_HEIGHT = 64
-    DRAW_SIZE = 64
+    DRAW_SIZE = PLAYER_SPRITE_SIZE
     WALK_FPS = 8
     IDLE_FRAME = 1
     SPRITESHEET_PATH = (
@@ -42,9 +42,8 @@ class PlayerView:
             frame_index = self.IDLE_FRAME
 
         image = direction_frames[frame_index]
-        draw_rect = image.get_rect()
         hitbox = pygame.Rect(*model.rect)
-        draw_rect.topleft = hitbox.topleft
+        draw_rect = self._sprite_rect_for_hitbox(hitbox)
         surface.blit(image, draw_rect)
 
     def _load_frames(self) -> dict[str, list[pygame.Surface]] | None:
@@ -73,6 +72,12 @@ class PlayerView:
         return frames
 
     def _draw_fallback(self, surface, model: PlayerModel) -> None:
-        rect = pygame.Rect(*model.rect)
-        pygame.draw.rect(surface, COLORS["player"], rect)
-        pygame.draw.rect(surface, COLORS["player_outline"], rect, 2)
+        hitbox = pygame.Rect(*model.rect)
+        visual = self._sprite_rect_for_hitbox(hitbox)
+        pygame.draw.rect(surface, COLORS["player"], visual)
+        pygame.draw.rect(surface, COLORS["player_outline"], visual, 2)
+
+    def _sprite_rect_for_hitbox(self, hitbox: pygame.Rect) -> pygame.Rect:
+        rect = pygame.Rect(0, 0, self.DRAW_SIZE, self.DRAW_SIZE)
+        rect.midbottom = hitbox.midbottom
+        return rect

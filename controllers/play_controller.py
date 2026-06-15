@@ -8,7 +8,14 @@ from models.office_map_model import OfficeMapModel
 from models.player_model import PlayerModel
 from models.project_stats_model import ProjectStatsModel
 from models.task_manager_model import TaskManager
-from settings import PLAYER_HEIGHT, PLAYER_SPEED, PLAYER_WIDTH, TILE_SIZE
+from settings import (
+    CHARACTER_HITBOX_HEIGHT,
+    CHARACTER_HITBOX_WIDTH,
+    PLAYER_HEIGHT,
+    PLAYER_SPEED,
+    PLAYER_WIDTH,
+    TILE_SIZE,
+)
 from views.play_view import PlayView
 
 
@@ -125,8 +132,8 @@ class PlayController(BaseSceneController):
                 self.kanban_open = False
 
     def _create_employees(self) -> list[EmployeeModel]:
-        employee_width = 26
-        employee_height = 30
+        employee_width = CHARACTER_HITBOX_WIDTH
+        employee_height = CHARACTER_HITBOX_HEIGHT
         employee_specs = [
             ("Яков", "backend", (11, 3, 2, 3)),
             ("Кира", "frontend", (15, 3, 2, 3)),

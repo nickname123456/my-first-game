@@ -8,6 +8,7 @@ from models.employee_model import (
     EmployeeModel,
 )
 from models.office_map_model import OfficeMapModel
+from settings import CHARACTER_HITBOX_HEIGHT, CHARACTER_HITBOX_WIDTH
 
 
 def make_employee(office_map: OfficeMapModel) -> EmployeeModel:
@@ -16,10 +17,10 @@ def make_employee(office_map: OfficeMapModel) -> EmployeeModel:
     return EmployeeModel(
         "Anton",
         "backend",
-        center_x - 10,
-        center_y - 10,
-        20,
-        20,
+        center_x - CHARACTER_HITBOX_WIDTH // 2,
+        center_y - CHARACTER_HITBOX_HEIGHT // 2,
+        CHARACTER_HITBOX_WIDTH,
+        CHARACTER_HITBOX_HEIGHT,
         work_cell=work_cell,
     )
 

@@ -3,6 +3,7 @@ from models.employee_model import EMPLOYEE_STATE_GOING_TO_WORK, EMPLOYEE_STATE_W
 from models.project_stats_model import ProjectStatsModel
 from models.task_manager_model import TaskManager
 from models.task_model import TASK_STATUS_DONE, TASK_STATUS_FAILED, TASK_STATUS_IN_PROGRESS, Task
+from settings import CHARACTER_HITBOX_HEIGHT, CHARACTER_HITBOX_WIDTH
 
 
 def make_task(
@@ -25,7 +26,14 @@ def make_task(
 
 
 def make_employee() -> EmployeeModel:
-    return EmployeeModel("Anton", "backend", 0, 0, 20, 20)
+    return EmployeeModel(
+        "Anton",
+        "backend",
+        0,
+        0,
+        CHARACTER_HITBOX_WIDTH,
+        CHARACTER_HITBOX_HEIGHT,
+    )
 
 
 def test_priority_queue_ranks_urgent_task_higher_than_non_urgent() -> None:
