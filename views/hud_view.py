@@ -24,6 +24,7 @@ class HudView:
             f"Готово: {stats.tasks_done}",
             f"Провалено: {stats.tasks_failed}",
             f"Активно: {stats.tasks_active}",
+            f"Кризисы: {stats.active_crises}",
         ]
         text = self.font.render("   ".join(values), True, COLORS["text"])
         surface.blit(text, (16, 9))

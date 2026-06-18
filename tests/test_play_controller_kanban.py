@@ -5,7 +5,7 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 import pygame
 
 from controllers.play_controller import PlayController
-from models.task_model import TASK_STATUS_IN_PROGRESS, TASK_STATUS_TODO
+from models.task_model import TASK_STATUS_IN_PROGRESS, TASK_STATUS_QUEUED, TASK_STATUS_TODO
 
 
 class DummyGameController:
@@ -64,11 +64,26 @@ def test_mouse_click_on_employee_assigns_selected_task() -> None:
     assert controller.selected_task_id is None
 
 
-def test_busy_employee_click_does_not_clear_selected_task() -> None:
+def test_busy_employee_click_queues_selected_task() -> None:
     controller = make_controller()
     task = controller._sorted_tasks()[0]
     controller.selected_task_id = task.id
     controller.employees[0].current_task_id = 999
+    controller.view = HitTestView("employee", 0)
+
+    controller._handle_kanban_event(mouse_click())
+
+    assert task.status == TASK_STATUS_QUEUED
+    assert task.id in controller.employees[0].task_queue
+    assert controller.selected_task_id is None
+
+
+def test_full_employee_click_does_not_clear_selected_task() -> None:
+    controller = make_controller()
+    task = controller._sorted_tasks()[0]
+    controller.selected_task_id = task.id
+    controller.employees[0].current_task_id = 999
+    controller.employees[0].task_queue = [998, 997]
     controller.view = HitTestView("employee", 0)
 
     controller._handle_kanban_event(mouse_click())

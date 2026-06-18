@@ -2,7 +2,14 @@ from models.employee_model import EmployeeModel
 from models.employee_model import EMPLOYEE_STATE_GOING_TO_WORK, EMPLOYEE_STATE_WORKING
 from models.project_stats_model import ProjectStatsModel
 from models.task_manager_model import TaskManager
-from models.task_model import TASK_STATUS_DONE, TASK_STATUS_FAILED, TASK_STATUS_IN_PROGRESS, Task
+from models.task_model import (
+    TASK_STATUS_DONE,
+    TASK_STATUS_FAILED,
+    TASK_STATUS_IN_PROGRESS,
+    TASK_STATUS_QUEUED,
+    TASK_STATUS_TODO,
+    Task,
+)
 from settings import CHARACTER_HITBOX_HEIGHT, CHARACTER_HITBOX_WIDTH
 
 
@@ -12,11 +19,12 @@ def make_task(
     business_value: int = 5,
     estimated_time: float = 10,
     status: str = "todo",
+    required_skill: str = "backend",
 ) -> Task:
     return Task(
         id=task_id,
         title=f"Task {task_id}",
-        required_skill="backend",
+        required_skill=required_skill,
         difficulty=3,
         deadline=deadline,
         business_value=business_value,
@@ -71,6 +79,77 @@ def test_assign_task_marks_task_in_progress_and_employee_busy() -> None:
     assert manager.tasks[0].status == TASK_STATUS_IN_PROGRESS
     assert employee.is_busy is True
     assert employee.current_task_id == 1
+
+
+def test_assign_task_queues_when_employee_already_has_current_task() -> None:
+    manager = TaskManager(initial_tasks=0)
+    employee = make_employee()
+    manager.tasks = [make_task(1, deadline=40), make_task(2, deadline=60)]
+
+    assert manager.assign_task(1, employee) is True
+    assert manager.assign_task(2, employee) is True
+
+    assert manager.tasks[0].status == TASK_STATUS_IN_PROGRESS
+    assert manager.tasks[1].status == TASK_STATUS_QUEUED
+    assert employee.current_task_id == 1
+    assert employee.task_queue == [2]
+
+
+def test_assign_task_rejects_employee_with_full_queue() -> None:
+    manager = TaskManager(initial_tasks=0)
+    employee = make_employee()
+    manager.tasks = [
+        make_task(1, deadline=40),
+        make_task(2, deadline=60),
+        make_task(3, deadline=80),
+        make_task(4, deadline=90),
+    ]
+
+    assert manager.assign_task(1, employee) is True
+    assert manager.assign_task(2, employee) is True
+    assert manager.assign_task(3, employee) is True
+    assert manager.assign_task(4, employee) is False
+
+    assert manager.tasks[3].status == TASK_STATUS_TODO
+    assert employee.task_queue == [2, 3]
+
+
+def test_queued_task_is_promoted_after_current_task_is_done() -> None:
+    manager = TaskManager(initial_tasks=0, spawn_interval=999)
+    employee = make_employee()
+    stats = ProjectStatsModel()
+    manager.tasks = [
+        make_task(1, deadline=40, estimated_time=1),
+        make_task(2, deadline=60, estimated_time=10),
+    ]
+    manager.assign_task(1, employee)
+    manager.assign_task(2, employee)
+    employee.state = EMPLOYEE_STATE_WORKING
+    employee.ready_to_work = True
+
+    manager.update(2.0, [employee], stats)
+
+    assert manager.tasks[0].status == TASK_STATUS_DONE
+    assert manager.tasks[1].status == TASK_STATUS_IN_PROGRESS
+    assert employee.current_task_id == 2
+    assert employee.task_queue == []
+
+
+def test_mismatch_skill_increases_employee_load() -> None:
+    manager = TaskManager(initial_tasks=0)
+    matched_employee = make_employee()
+    mismatch_employee = make_employee()
+    manager.tasks = [
+        make_task(1, deadline=40, required_skill="backend"),
+        make_task(2, deadline=40, required_skill="frontend"),
+    ]
+    manager.assign_task(1, matched_employee)
+    manager.assign_task(2, mismatch_employee)
+
+    matched_load = manager.calculate_employee_load(matched_employee, current_time=0)
+    mismatch_load = manager.calculate_employee_load(mismatch_employee, current_time=0)
+
+    assert mismatch_load > matched_load
 
 
 def test_task_progress_increases_during_update() -> None:

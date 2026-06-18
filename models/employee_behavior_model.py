@@ -56,8 +56,8 @@ class EmployeeBehaviorSystem:
         '''
         строит дерево:
         Selector
-        ├── если burnout -> ничего не делать
         ├── если needs_help -> идти в переговорку
+        ├── если burnout -> ничего не делать
         ├── если устал -> отдыхать
         ├── если есть задача, но не взята у канбана -> идти к канбану
         ├── если задача уже взята -> идти к рабочему месту
@@ -68,14 +68,14 @@ class EmployeeBehaviorSystem:
             [
                 Sequence(
                     [
-                        ConditionNode(self._is_burned_out),
-                        ActionNode(self._do_nothing),
+                        ConditionNode(self._needs_help),
+                        ActionNode(self._go_to_meeting),
                     ]
                 ),
                 Sequence(
                     [
-                        ConditionNode(self._needs_help),
-                        ActionNode(self._go_to_meeting),
+                        ConditionNode(self._is_burned_out),
+                        ActionNode(self._do_nothing),
                     ]
                 ),
                 Sequence(
@@ -124,6 +124,7 @@ class EmployeeBehaviorSystem:
         # Если усталость сотрудника достигла порога выгорания, переводим его в состояние выгорания
         if employee.fatigue >= BURNOUT_FATIGUE_THRESHOLD:
             employee.state = EMPLOYEE_STATE_BURNOUT
+            employee.mood = "burnout"
             employee.ready_to_work = False
 
         context = EmployeeBehaviorContext(employee, office_map, dt)
@@ -134,7 +135,7 @@ class EmployeeBehaviorSystem:
     def _is_burned_out(self, context: EmployeeBehaviorContext) -> bool:
         '''
         проверяет, находится ли сотрудник в состоянии выгорания'''
-        return context.employee.state == EMPLOYEE_STATE_BURNOUT
+        return context.employee.state == EMPLOYEE_STATE_BURNOUT or context.employee.mood == "burnout"
 
     def _needs_help(self, context: EmployeeBehaviorContext) -> bool:
         ''' проверяет, нуждается ли сотрудник в помощи'''

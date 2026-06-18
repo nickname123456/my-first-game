@@ -16,9 +16,13 @@ from models.task_model import (
     TASK_STATUS_DONE,
     TASK_STATUS_FAILED,
     TASK_STATUS_IN_PROGRESS,
+    TASK_STATUS_QUEUED,
     TASK_STATUS_TODO,
     Task,
 )
+
+
+MAX_ASSIGNMENTS_PER_EMPLOYEE = 3
 
 
 @dataclass(frozen=True)
@@ -45,6 +49,7 @@ class TaskManager:
         self._next_task_id = 1
         self._next_template_index = 0
         self._task_pool = self._build_task_pool()
+        self._tech_debt_drift = 0.0
 
         for _ in range(initial_tasks):
             self.spawn_task(current_time=0.0)
@@ -63,7 +68,7 @@ class TaskManager:
             self.spawn_task(current_time)
 
         self._fail_overdue_tasks(current_time, employees)
-        self._update_in_progress_tasks(dt, employees)
+        self._update_in_progress_tasks(dt, employees, stats)
         self.sync_stats(stats)
 
     def elapsed_time(self, stats: ProjectStatsModel) -> float:
@@ -91,19 +96,19 @@ class TaskManager:
 
     def assign_task(self, task_id: int, employee: EmployeeModel) -> bool:
         task = self.get_task(task_id)
-        if task is None or task.status != TASK_STATUS_TODO or employee.is_busy:
+        if task is None or task.status != TASK_STATUS_TODO:
             return False
 
-        task.status = TASK_STATUS_IN_PROGRESS
+        if not self.employee_has_capacity(employee):
+            return False
+
         task.assigned_employee = employee.name
-        employee.current_task_id = task.id
-        employee.task_progress_speed = self._calculate_progress_speed(task, employee)
-        employee.task_picked_up = False
-        employee.ready_to_work = False
-        employee.state = EMPLOYEE_STATE_IDLE
-        employee.target_cell = None
-        employee.path = []
-        employee.path_index = 0
+        if employee.current_task_id is None:
+            self._start_task_for_employee(task, employee)
+        else:
+            task.status = TASK_STATUS_QUEUED
+            employee.task_queue.append(task.id)
+
         return True
 
     def get_task(self, task_id: int) -> Task | None:
@@ -121,6 +126,72 @@ class TaskManager:
                 active_tasks.append(task)
 
         return active_tasks
+
+    def employee_has_capacity(self, employee: EmployeeModel) -> bool:
+        return employee.assignment_count < MAX_ASSIGNMENTS_PER_EMPLOYEE
+
+    def calculate_employee_load(
+        self,
+        employee: EmployeeModel,
+        current_time: float,
+    ) -> float:
+        task_ids = self.employee_task_ids(employee)
+        load = employee.fatigue * 0.55
+        load += len(task_ids) * 10.0
+        load += max(0, len(task_ids) - 1) * 22.0
+
+        if employee.active_crisis_id is not None:
+            load += 16.0
+
+        for task_id in task_ids:
+            task = self.get_task(task_id)
+            if task is None:
+                continue
+
+            load += task.difficulty * 2.0
+            if task.required_skill != employee.role:
+                load += 18.0
+
+            time_left = task.deadline - current_time
+            if time_left <= task.estimated_time * 1.2:
+                load += 14.0
+            if time_left <= 10.0:
+                load += 10.0
+
+        return max(0.0, min(100.0, load))
+
+    def employee_has_deadline_pressure(
+        self,
+        employee: EmployeeModel,
+        current_time: float,
+    ) -> bool:
+        for task_id in self.employee_task_ids(employee):
+            task = self.get_task(task_id)
+            if task is None:
+                continue
+            if task.deadline - current_time <= max(10.0, task.estimated_time * 1.2):
+                return True
+        return False
+
+    def employee_task_ids(self, employee: EmployeeModel) -> list[int]:
+        task_ids = []
+        if employee.current_task_id is not None:
+            task_ids.append(employee.current_task_id)
+        task_ids.extend(employee.task_queue)
+        return task_ids
+
+    def pop_last_queued_task(self, employee: EmployeeModel) -> Task | None:
+        if not employee.task_queue:
+            return None
+
+        task_id = employee.task_queue.pop()
+        task = self.get_task(task_id)
+        if task is None:
+            return None
+
+        task.status = TASK_STATUS_TODO
+        task.assigned_employee = None
+        return task
 
     def sorted_active_tasks(self, current_time: float) -> list[Task]:
         heap: list[tuple[float, int, Task]] = [] # список из (-priority, task.id, task)
@@ -180,9 +251,11 @@ class TaskManager:
         self,
         dt: float,
         employees: list[EmployeeModel],
+        stats: ProjectStatsModel,
     ) -> None:
         for employee in employees:
             if employee.current_task_id is None:
+                self._promote_next_task(employee)
                 continue
 
             task = self.get_task(employee.current_task_id)
@@ -197,8 +270,23 @@ class TaskManager:
             progress_delta = employee.task_progress_speed * speed_multiplier * dt
             task.progress = min(100.0, task.progress + progress_delta)
             employee.fatigue = min(100.0, employee.fatigue + 3.5 * dt)
+            if len(employee.task_queue) > 0:
+                employee.fatigue = min(100.0, employee.fatigue + 1.2 * len(employee.task_queue) * dt)
+
+            if task.required_skill != employee.role:
+                self._tech_debt_drift += 0.35 * dt
+                if self._tech_debt_drift >= 1.0:
+                    gained_debt = int(self._tech_debt_drift)
+                    self._tech_debt_drift -= gained_debt
+                    stats.apply_changes(tech_debt=gained_debt)
+
             if task.progress >= 100.0:
                 task.status = TASK_STATUS_DONE
+                employee.success_boost_timer = 12.0
+                if task.required_skill == employee.role:
+                    stats.apply_changes(quality=1, morale=1)
+                else:
+                    stats.apply_changes(quality=-3, tech_debt=4)
                 self._release_employee(employee)
 
 
@@ -214,13 +302,16 @@ class TaskManager:
                 task.progress = min(task.progress, 99.0)
                 assigned = self._find_employee_by_task(task.id, employees)
                 if assigned is not None:
-                    self._release_employee(assigned)
+                    if assigned.current_task_id == task.id:
+                        self._release_employee(assigned)
+                    elif task.id in assigned.task_queue:
+                        assigned.task_queue.remove(task.id)
 
 
 
     def _find_employee_by_task(self, task_id: int, employees: list[EmployeeModel]) -> EmployeeModel | None:
         for employee in employees:
-            if employee.current_task_id == task_id:
+            if employee.current_task_id == task_id or task_id in employee.task_queue:
                 return employee
 
         return None
@@ -228,6 +319,26 @@ class TaskManager:
     def _calculate_progress_speed(self, task: Task, employee: EmployeeModel) -> float:
         skill_multiplier = 1.0 if task.required_skill == employee.role else 0.55
         return 100.0 / max(1.0, task.estimated_time) * skill_multiplier
+
+    def _start_task_for_employee(self, task: Task, employee: EmployeeModel) -> None:
+        task.status = TASK_STATUS_IN_PROGRESS
+        task.assigned_employee = employee.name
+        employee.current_task_id = task.id
+        employee.task_progress_speed = self._calculate_progress_speed(task, employee)
+        employee.task_picked_up = False
+        employee.ready_to_work = False
+        employee.state = EMPLOYEE_STATE_IDLE
+        employee.target_cell = None
+        employee.path = []
+        employee.path_index = 0
+
+    def _promote_next_task(self, employee: EmployeeModel) -> None:
+        while employee.current_task_id is None and employee.task_queue:
+            next_task_id = employee.task_queue.pop(0)
+            task = self.get_task(next_task_id)
+            if task is None or task.status != TASK_STATUS_QUEUED:
+                continue
+            self._start_task_for_employee(task, employee)
 
     def _release_employee(self, employee: EmployeeModel) -> None:
         employee.current_task_id = None
@@ -243,6 +354,7 @@ class TaskManager:
             EMPLOYEE_STATE_RESTING,
         ):
             employee.state = EMPLOYEE_STATE_IDLE
+        self._promote_next_task(employee)
 
     def _build_task_pool(self) -> list[TaskTemplate]:
         return [

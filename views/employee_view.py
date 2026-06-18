@@ -12,6 +12,7 @@ from models.employee_model import (
     EMPLOYEE_STATE_WORKING,
     EmployeeModel,
 )
+from models.crisis_model import CrisisManager
 from models.task_manager_model import TaskManager
 from settings import COLORS, PLAYER_SPRITE_SIZE
 from views.font_utils import get_ui_font
@@ -70,10 +71,12 @@ class EmployeeView:
         surface,
         employees: list[EmployeeModel],
         task_manager: TaskManager | None = None,
+        crisis_manager: CrisisManager | None = None,
     ) -> None:
         for employee in employees:
             rect = pygame.Rect(*employee.rect)
             visual_rect = self._draw_employee(surface, employee, rect)
+            self._draw_crisis_indicator(surface, employee, visual_rect, crisis_manager)
 
             label = self.font.render(employee.role, True, COLORS["text"])
             label_rect = label.get_rect(center=(rect.centerx, visual_rect.top - 8))
@@ -166,3 +169,29 @@ class EmployeeView:
         rect = pygame.Rect(0, 0, self.DRAW_SIZE, self.DRAW_SIZE)
         rect.midbottom = hitbox.midbottom
         return rect
+
+    def _draw_crisis_indicator(
+        self,
+        surface,
+        employee: EmployeeModel,
+        visual_rect: pygame.Rect,
+        crisis_manager: CrisisManager | None,
+    ) -> None:
+        if crisis_manager is None or employee.active_crisis_id is None:
+            return
+
+        crisis = crisis_manager.get_crisis(employee.active_crisis_id)
+        if crisis is None:
+            return
+
+        center = (visual_rect.centerx + 26, visual_rect.top - 26)
+        pygame.draw.circle(surface, (214, 68, 68), center, 16)
+        pygame.draw.circle(surface, COLORS["player_outline"], center, 16, 2)
+
+        marker = self.font.render("!", True, COLORS["text"])
+        marker_rect = marker.get_rect(center=(center[0], center[1] - 2))
+        surface.blit(marker, marker_rect)
+
+        timer = self.small_font.render(str(max(0, int(crisis.time_left))), True, COLORS["text"])
+        timer_rect = timer.get_rect(center=(center[0], center[1] + 22))
+        surface.blit(timer, timer_rect)

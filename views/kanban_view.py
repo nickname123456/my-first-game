@@ -1,7 +1,8 @@
 import pygame
 
 from models.employee_model import EmployeeModel
-from models.task_model import TASK_STATUS_IN_PROGRESS, TASK_STATUS_TODO, Task
+from models.task_manager_model import MAX_ASSIGNMENTS_PER_EMPLOYEE
+from models.task_model import TASK_STATUS_IN_PROGRESS, TASK_STATUS_QUEUED, TASK_STATUS_TODO, Task
 from settings import COLORS, SCREEN_HEIGHT, SCREEN_WIDTH
 from views.font_utils import get_ui_font
 
@@ -65,7 +66,7 @@ class KanbanView:
             selected_task is not None
             and employees
             and selected_task.status == TASK_STATUS_TODO
-            and not employees[selected_employee_index].is_busy
+            and employees[selected_employee_index].assignment_count < MAX_ASSIGNMENTS_PER_EMPLOYEE
         )
         assign_color = (73, 148, 111) if can_assign else (72, 78, 88)
         pygame.draw.rect(surface, assign_color, self.assign_rect, border_radius=4)
@@ -128,6 +129,8 @@ class KanbanView:
             )
             if task.status == TASK_STATUS_IN_PROGRESS:
                 meta += f" | {task.assigned_employee}"
+            elif task.status == TASK_STATUS_QUEUED:
+                meta += f" | в очереди: {task.assigned_employee}"
             self._draw_text(surface, title, self.font, rect.x + 10, rect.y + 5)
             self._draw_text(surface, meta, self.small_font, rect.x + 10, rect.y + 25, COLORS["muted_text"])
 
@@ -164,6 +167,8 @@ class KanbanView:
         selected_task: Task | None,
     ) -> tuple[int, int, int]:
         if employee.is_busy:
+            if employee.assignment_count >= MAX_ASSIGNMENTS_PER_EMPLOYEE:
+                return (68, 42, 45)
             return (42, 46, 54)
         if selected_task is not None and employee.role == selected_task.required_skill:
             return (54, 91, 72)
@@ -175,7 +180,9 @@ class KanbanView:
         selected_task: Task | None,
     ) -> str:
         if employee.is_busy:
-            return "занят"
+            if employee.assignment_count >= MAX_ASSIGNMENTS_PER_EMPLOYEE:
+                return f"перегружен {employee.assignment_count}/{MAX_ASSIGNMENTS_PER_EMPLOYEE}"
+            return f"очередь {employee.assignment_count}/{MAX_ASSIGNMENTS_PER_EMPLOYEE}"
         if selected_task is None:
             return "свободен"
         if employee.role == selected_task.required_skill:

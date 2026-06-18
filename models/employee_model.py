@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 EMPLOYEE_STATE_IDLE = "idle"
@@ -21,9 +21,14 @@ class EmployeeModel:
     width: int
     height: int
     current_task_id: int | None = None
+    task_queue: list[int] = field(default_factory=list)
     task_progress_speed: float = 0.0
     state: str = EMPLOYEE_STATE_IDLE
+    mood: str = "normal"
     fatigue: float = 0.0
+    active_crisis_id: int | None = None
+    recent_help_timer: float = 0.0
+    success_boost_timer: float = 0.0
     target_cell: tuple[int, int] | None = None
     path: list[tuple[int, int]] | None = None
     path_index: int = 0
@@ -41,7 +46,14 @@ class EmployeeModel:
 
     @property
     def is_busy(self) -> bool:
-        return self.current_task_id is not None
+        return self.current_task_id is not None or bool(self.task_queue)
+
+    @property
+    def assignment_count(self) -> int:
+        count = len(self.task_queue)
+        if self.current_task_id is not None:
+            count += 1
+        return count
 
     def set_movement_state(self, direction: str | None, is_moving: bool, dt: float) -> None:
         if direction is not None:

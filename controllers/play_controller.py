@@ -1,9 +1,11 @@
 import pygame
 
 from controllers.base_scene_controller import BaseSceneController
+from models.crisis_model import CrisisManager
 from models.employee_behavior_model import EmployeeBehaviorSystem
 from controllers.player_controller import PlayerController
 from models.employee_model import EmployeeModel
+from models.mood_model import MoodSystem
 from models.office_map_model import OfficeMapModel
 from models.player_model import PlayerModel
 from models.project_stats_model import ProjectStatsModel
@@ -33,6 +35,8 @@ class PlayController(BaseSceneController):
         self.player_controller = PlayerController(self.player, self.office_map)
         self.employees = self._create_employees()
         self.employee_behavior = EmployeeBehaviorSystem()
+        self.mood_system = MoodSystem()
+        self.crisis_manager = CrisisManager()
         self.project_stats = ProjectStatsModel()
         self.task_manager = TaskManager(
             release_duration=self.project_stats.release_time_left,
@@ -42,9 +46,15 @@ class PlayController(BaseSceneController):
         self.selected_task_id: int | None = None
         self.selected_task_index = 0
         self.selected_employee_index = 0
+        self.active_crisis_dialog_id: int | None = None
+        self.selected_crisis_option_index = 0
         self.view = PlayView()
 
     def handle_event(self, event) -> None:
+        if self.active_crisis_dialog_id is not None:
+            self._handle_crisis_dialog_event(event)
+            return
+
         if self.kanban_open:
             self._handle_kanban_event(event)
             return
@@ -52,18 +62,33 @@ class PlayController(BaseSceneController):
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
                 self.game_controller.quit()
-            elif event.key == pygame.K_e and self._player_is_near_kanban():
-                self._open_kanban()
+            elif event.key == pygame.K_e:
+                if self._open_nearby_crisis_dialog():
+                    return
+                if self._player_is_near_kanban():
+                    self._open_kanban()
 
     def update(self, dt: float) -> None:
         self.project_stats.release_time_left = max(
             0.0,
             self.project_stats.release_time_left - dt,
         )
+        current_time = self.task_manager.elapsed_time(self.project_stats)
         self.employee_behavior.update(dt, self.employees, self.office_map)
         self.task_manager.update(dt, self.employees, self.project_stats)
+        self.mood_system.update(dt, self.employees, self.task_manager, current_time)
+        self.crisis_manager.update(
+            dt,
+            self.employees,
+            self.task_manager,
+            self.project_stats,
+            current_time,
+        )
+        if self.crisis_manager.get_crisis(self.active_crisis_dialog_id) is None:
+            self.active_crisis_dialog_id = None
+            self.selected_crisis_option_index = 0
 
-        if not self.kanban_open:
+        if not self.kanban_open and self.active_crisis_dialog_id is None:
             self.player_controller.handle_input(pygame.key.get_pressed(), dt)
 
     def draw(self, surface) -> None:
@@ -76,11 +101,14 @@ class PlayController(BaseSceneController):
             self.employees,
             self.project_stats,
             self.task_manager,
+            self.crisis_manager,
             sorted_tasks,
             self.kanban_open,
             self.selected_task_id,
             self.selected_task_index,
             self.selected_employee_index,
+            self.active_crisis_dialog_id,
+            self.selected_crisis_option_index,
         )
 
     def _handle_kanban_event(self, event) -> None:
@@ -130,6 +158,45 @@ class PlayController(BaseSceneController):
                 self._assign_selected_task()
             elif hit_type == "close":
                 self.kanban_open = False
+
+    def _handle_crisis_dialog_event(self, event) -> None:
+        crisis = self.crisis_manager.get_crisis(self.active_crisis_dialog_id)
+        if crisis is None:
+            self.active_crisis_dialog_id = None
+            self.selected_crisis_option_index = 0
+            return
+
+        definition = self.crisis_manager.get_definition(crisis)
+        option_count = len(definition.options)
+
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                self.active_crisis_dialog_id = None
+                self.selected_crisis_option_index = 0
+            elif event.key == pygame.K_UP:
+                self.selected_crisis_option_index = self._move_selection(
+                    self.selected_crisis_option_index,
+                    -1,
+                    option_count,
+                )
+            elif event.key == pygame.K_DOWN:
+                self.selected_crisis_option_index = self._move_selection(
+                    self.selected_crisis_option_index,
+                    1,
+                    option_count,
+                )
+            elif event.key == pygame.K_RETURN:
+                self._resolve_active_crisis(self.selected_crisis_option_index)
+            elif pygame.K_1 <= event.key <= pygame.K_4:
+                option_index = event.key - pygame.K_1
+                self._resolve_active_crisis(option_index)
+        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            hit_type, hit_index = self.view.hit_test_crisis_dialog(event.pos)
+            if hit_type == "option":
+                self._resolve_active_crisis(hit_index)
+            elif hit_type == "close":
+                self.active_crisis_dialog_id = None
+                self.selected_crisis_option_index = 0
 
     def _create_employees(self) -> list[EmployeeModel]:
         employee_width = CHARACTER_HITBOX_WIDTH
@@ -189,6 +256,20 @@ class PlayController(BaseSceneController):
         if assigned:
             self.selected_task_id = None
         self._clamp_kanban_selection()
+
+    def _resolve_active_crisis(self, option_index: int) -> None:
+        if self.active_crisis_dialog_id is None:
+            return
+        resolved = self.crisis_manager.resolve_crisis(
+            self.active_crisis_dialog_id,
+            option_index,
+            self.employees,
+            self.task_manager,
+            self.project_stats,
+        )
+        if resolved:
+            self.active_crisis_dialog_id = None
+            self.selected_crisis_option_index = 0
 
     def _sorted_tasks(self):
         current_time = self.task_manager.elapsed_time(self.project_stats)
@@ -257,3 +338,23 @@ class PlayController(BaseSceneController):
                     if self.office_map.grid[y][x] == OfficeMapModel.KANBAN:
                         return True
         return False
+
+    def _open_nearby_crisis_dialog(self) -> bool:
+        employee = self._nearby_crisis_employee()
+        if employee is None or employee.active_crisis_id is None:
+            return False
+        if self.crisis_manager.get_crisis(employee.active_crisis_id) is None:
+            return False
+        self.active_crisis_dialog_id = employee.active_crisis_id
+        self.selected_crisis_option_index = 0
+        return True
+
+    def _nearby_crisis_employee(self) -> EmployeeModel | None:
+        player_rect = pygame.Rect(self.player.rect)
+        for employee in self.employees:
+            if employee.active_crisis_id is None:
+                continue
+            employee_rect = pygame.Rect(employee.rect).inflate(80, 80)
+            if player_rect.colliderect(employee_rect):
+                return employee
+        return None
