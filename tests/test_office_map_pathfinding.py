@@ -3,9 +3,9 @@ from models.pathfinding_model import astar_path
 
 
 EXPECTED_WORKPLACES = {
-    "backend": (10, 4),
-    "frontend": (14, 4),
-    "QA": (18, 4),
+    "backend": (10, 3),
+    "frontend": (14, 3),
+    "QA": (18, 3),
     "DevOps": (10, 9),
     "AI": (14, 9),
 }
