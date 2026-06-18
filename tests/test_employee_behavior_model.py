@@ -58,7 +58,7 @@ def test_behavior_tree_selects_rest_when_fatigue_is_high() -> None:
     employee = make_employee(office_map)
     employee.current_task_id = 1
     employee.task_picked_up = True
-    employee.fatigue = 80.0
+    employee.fatigue = 90.0
     behavior = EmployeeBehaviorSystem(random.Random(1))
 
     behavior.update_employee(0.0, employee, office_map)

@@ -20,7 +20,13 @@ CRISIS_CONFLICT = "conflict"
 CRISIS_INFRASTRUCTURE_OUTAGE = "infrastructure_outage"
 CRISIS_TECH_DEBT_ISSUE = "tech_debt_issue"
 
-CRISIS_ROLL_INTERVAL = 4.0
+CRISIS_ROLL_INTERVAL = 10.0
+CRISIS_GRACE_PERIOD = 25.0
+MAX_ACTIVE_CRISES = 1
+TEAM_CRISIS_COOLDOWN = 20.0
+EMPLOYEE_CRISIS_COOLDOWN = 45.0
+MIN_TASK_PROGRESS_FOR_CRISIS = 20.0
+PRD_GROWTH_PER_FAILED_ROLL = 0.35
 
 
 @dataclass(frozen=True)
@@ -243,10 +249,22 @@ class CrisisManager:
         self,
         rng: random.Random | None = None,
         roll_interval: float = CRISIS_ROLL_INTERVAL,
+        grace_period: float = CRISIS_GRACE_PERIOD,
+        max_active_crises: int = MAX_ACTIVE_CRISES,
+        team_cooldown: float = TEAM_CRISIS_COOLDOWN,
+        employee_cooldown: float = EMPLOYEE_CRISIS_COOLDOWN,
+        min_task_progress_for_crisis: float = MIN_TASK_PROGRESS_FOR_CRISIS,
     ) -> None:
         self.rng = rng or random.Random()
         self.roll_interval = roll_interval
+        self.grace_period = grace_period
+        self.max_active_crises = max_active_crises
+        self.team_cooldown = team_cooldown
+        self.employee_cooldown = employee_cooldown
+        self.min_task_progress_for_crisis = min_task_progress_for_crisis
         self._roll_timer = 0.0
+        self._team_cooldown_timer = 0.0
+        self._employee_cooldowns: dict[str, float] = {}
         self._next_crisis_id = 1
         self.active_crises: dict[int, Crisis] = {}
         self.failed_rolls: dict[str, int] = {}
@@ -259,6 +277,7 @@ class CrisisManager:
         stats: ProjectStatsModel,
         current_time: float,
     ) -> None:
+        self._update_cooldowns(dt)
         self._update_timers(dt, employees, task_manager, stats)
         self._roll_timer += dt
         if self._roll_timer >= self.roll_interval:
@@ -274,6 +293,18 @@ class CrisisManager:
         stats: ProjectStatsModel,
         current_time: float,
     ) -> Crisis | None:
+        if current_time < self.grace_period:
+            return None
+
+        if len(self.active_crises) >= self.max_active_crises:
+            return None
+
+        if self._team_cooldown_timer > 0.0:
+            return None
+
+        if self._employee_cooldowns.get(employee.name, 0.0) > 0.0:
+            return None
+
         if employee.active_crisis_id is not None or employee.current_task_id is None:
             return None
 
@@ -281,12 +312,18 @@ class CrisisManager:
         if task is None:
             return None
 
+        if task.progress < self.min_task_progress_for_crisis:
+            return None
+
         base_chance = self.calculate_base_chance(employee, task, task_manager, stats, current_time)
-        failed_rolls = self.failed_rolls.get(employee.name, 1)
-        chance = min(base_chance * failed_rolls, 0.80)
+        failed_rolls = self.failed_rolls.get(employee.name, 0)
+        chance = min(
+            base_chance * (1.0 + PRD_GROWTH_PER_FAILED_ROLL * failed_rolls),
+            0.35,
+        )
 
         if self.rng.random() < chance:
-            self.failed_rolls[employee.name] = 1
+            self.failed_rolls[employee.name] = 0
             crisis_type = self._choose_crisis_type(employee, task, task_manager, stats, current_time)
             return self.create_crisis(crisis_type, employee, task)
 
@@ -302,24 +339,24 @@ class CrisisManager:
         current_time: float,
     ) -> float:
         load = task_manager.calculate_employee_load(employee, current_time)
-        chance = 0.03
-        chance += task.difficulty * 0.012
-        chance += employee.fatigue * 0.0015
-        chance += load * 0.001
-        chance += stats.tech_debt * 0.001
+        chance = 0.012
+        chance += task.difficulty * 0.004
+        chance += employee.fatigue * 0.0005
+        chance += load * 0.00035
+        chance += stats.tech_debt * 0.0005
 
         if task.required_skill != employee.role:
-            chance += 0.10
+            chance += 0.04
 
         if task.deadline - current_time <= max(10.0, task.estimated_time * 1.2):
-            chance += 0.06
+            chance += 0.025
 
         if employee.mood == MOOD_STRESSED:
-            chance += 0.08
+            chance += 0.04
         elif employee.mood == MOOD_BURNOUT or employee.state == EMPLOYEE_STATE_BURNOUT:
-            chance += 0.12
+            chance += 0.08
 
-        return max(0.01, min(chance, 0.45))
+        return max(0.005, min(chance, 0.18))
 
     def create_crisis(
         self,
@@ -403,6 +440,16 @@ class CrisisManager:
             self._apply_effect(definition.timeout_effect, crisis, employee, task_manager, stats)
             self._close_crisis(crisis, employee)
 
+    def _update_cooldowns(self, dt: float) -> None:
+        self._team_cooldown_timer = max(0.0, self._team_cooldown_timer - dt)
+
+        for employee_name in list(self._employee_cooldowns.keys()):
+            remaining = self._employee_cooldowns[employee_name] - dt
+            if remaining <= 0.0:
+                del self._employee_cooldowns[employee_name]
+            else:
+                self._employee_cooldowns[employee_name] = remaining
+
     def _apply_effect(
         self,
         effect: CrisisEffect,
@@ -441,6 +488,8 @@ class CrisisManager:
         self.active_crises.pop(crisis.id, None)
         employee.active_crisis_id = None
         employee.needs_help = False
+        self._team_cooldown_timer = self.team_cooldown
+        self._employee_cooldowns[employee.name] = self.employee_cooldown
 
     def _choose_crisis_type(
         self,

@@ -23,6 +23,11 @@ from models.task_model import (
 
 
 MAX_ASSIGNMENTS_PER_EMPLOYEE = 3
+WORK_FATIGUE_PER_SECOND = 1.15
+QUEUE_FATIGUE_PER_TASK_PER_SECOND = 0.25
+MIN_FATIGUE_PROGRESS_MULTIPLIER = 0.65
+DEADLINE_ESTIMATE_MULTIPLIER = 2.4
+DEADLINE_TRAVEL_BUFFER = 28.0
 
 
 @dataclass(frozen=True)
@@ -86,7 +91,11 @@ class TaskManager:
             title=template.title,
             required_skill=template.required_skill,
             difficulty=template.difficulty,
-            deadline=current_time + template.deadline_offset,
+            deadline=current_time + max(
+                template.deadline_offset,
+                template.estimated_time * DEADLINE_ESTIMATE_MULTIPLIER
+                + DEADLINE_TRAVEL_BUFFER,
+            ),
             business_value=template.business_value,
             estimated_time=template.estimated_time,
         )
@@ -289,12 +298,15 @@ class TaskManager:
             if employee.state != EMPLOYEE_STATE_WORKING or not employee.ready_to_work:
                 continue
 
-            speed_multiplier = max(0.40, 1.0 - employee.fatigue / 130.0)
+            speed_multiplier = max(MIN_FATIGUE_PROGRESS_MULTIPLIER, 1.0 - employee.fatigue / 130.0)
             progress_delta = employee.task_progress_speed * speed_multiplier * dt
             task.progress = min(100.0, task.progress + progress_delta)
-            employee.fatigue = min(100.0, employee.fatigue + 3.5 * dt)
+            employee.fatigue = min(100.0, employee.fatigue + WORK_FATIGUE_PER_SECOND * dt)
             if len(employee.task_queue) > 0:
-                employee.fatigue = min(100.0, employee.fatigue + 1.2 * len(employee.task_queue) * dt)
+                employee.fatigue = min(
+                    100.0,
+                    employee.fatigue + QUEUE_FATIGUE_PER_TASK_PER_SECOND * len(employee.task_queue) * dt,
+                )
 
             if task.required_skill != employee.role:
                 self._tech_debt_drift += 0.35 * dt

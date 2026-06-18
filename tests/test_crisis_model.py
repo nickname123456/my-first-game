@@ -67,23 +67,83 @@ def make_assigned_context(
 
 def test_prd_increases_failed_roll_counter_after_no_crisis() -> None:
     manager, employee, stats = make_assigned_context()
-    crisis_manager = CrisisManager(FixedRandom([0.99]), roll_interval=4.0)
+    crisis_manager = CrisisManager(
+        FixedRandom([0.99]),
+        roll_interval=4.0,
+        grace_period=0.0,
+        min_task_progress_for_crisis=0.0,
+    )
 
     crisis = crisis_manager.roll_for_employee(employee, manager, stats, current_time=0.0)
 
     assert crisis is None
-    assert crisis_manager.failed_rolls[employee.name] == 2
+    assert crisis_manager.failed_rolls[employee.name] == 1
 
 
 def test_prd_resets_failed_roll_counter_after_crisis() -> None:
     manager, employee, stats = make_assigned_context()
-    crisis_manager = CrisisManager(FixedRandom([0.0, 0.0]), roll_interval=4.0)
+    crisis_manager = CrisisManager(
+        FixedRandom([0.0, 0.0]),
+        roll_interval=4.0,
+        grace_period=0.0,
+        min_task_progress_for_crisis=0.0,
+    )
 
     crisis = crisis_manager.roll_for_employee(employee, manager, stats, current_time=0.0)
 
     assert crisis is not None
-    assert crisis_manager.failed_rolls[employee.name] == 1
+    assert crisis_manager.failed_rolls[employee.name] == 0
     assert employee.active_crisis_id == crisis.id
+
+
+def test_grace_period_blocks_early_crisis_roll() -> None:
+    manager, employee, stats = make_assigned_context()
+    crisis_manager = CrisisManager(
+        FixedRandom([0.0]),
+        grace_period=25.0,
+        min_task_progress_for_crisis=0.0,
+    )
+
+    crisis = crisis_manager.roll_for_employee(employee, manager, stats, current_time=10.0)
+
+    assert crisis is None
+    assert employee.active_crisis_id is None
+
+
+def test_active_crisis_limit_blocks_additional_crises() -> None:
+    manager, first_employee, stats = make_assigned_context()
+    second_employee = make_employee("frontend")
+    second_task = make_task(2, required_skill="frontend", deadline=60.0)
+    manager.tasks.append(second_task)
+    manager.assign_task(second_task.id, second_employee)
+    crisis_manager = CrisisManager(
+        FixedRandom([0.0, 0.0]),
+        grace_period=0.0,
+        max_active_crises=1,
+        min_task_progress_for_crisis=0.0,
+    )
+
+    first_crisis = crisis_manager.roll_for_employee(first_employee, manager, stats, current_time=30.0)
+    second_crisis = crisis_manager.roll_for_employee(second_employee, manager, stats, current_time=30.0)
+
+    assert first_crisis is not None
+    assert second_crisis is None
+    assert len(crisis_manager.active_crises) == 1
+
+
+def test_low_task_progress_blocks_crisis_roll() -> None:
+    manager, employee, stats = make_assigned_context()
+    manager.tasks[0].progress = 19.0
+    crisis_manager = CrisisManager(
+        FixedRandom([0.0]),
+        grace_period=0.0,
+        min_task_progress_for_crisis=20.0,
+    )
+
+    crisis = crisis_manager.roll_for_employee(employee, manager, stats, current_time=30.0)
+
+    assert crisis is None
+    assert employee.active_crisis_id is None
 
 
 def test_mismatch_skill_increases_crisis_base_chance() -> None:

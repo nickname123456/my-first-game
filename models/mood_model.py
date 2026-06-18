@@ -27,28 +27,28 @@ class MoodContext:
 
 BASE_TRANSITIONS: dict[str, dict[str, float]] = {
     MOOD_NORMAL: {
-        MOOD_NORMAL: 0.70,
-        MOOD_TIRED: 0.22,
-        MOOD_STRESSED: 0.08,
+        MOOD_NORMAL: 0.82,
+        MOOD_TIRED: 0.14,
+        MOOD_STRESSED: 0.04,
         MOOD_BURNOUT: 0.00,
     },
     MOOD_TIRED: {
-        MOOD_NORMAL: 0.18,
-        MOOD_TIRED: 0.56,
-        MOOD_STRESSED: 0.24,
-        MOOD_BURNOUT: 0.02,
+        MOOD_NORMAL: 0.24,
+        MOOD_TIRED: 0.62,
+        MOOD_STRESSED: 0.13,
+        MOOD_BURNOUT: 0.01,
     },
     MOOD_STRESSED: {
-        MOOD_NORMAL: 0.08,
-        MOOD_TIRED: 0.25,
-        MOOD_STRESSED: 0.57,
-        MOOD_BURNOUT: 0.10,
+        MOOD_NORMAL: 0.12,
+        MOOD_TIRED: 0.30,
+        MOOD_STRESSED: 0.53,
+        MOOD_BURNOUT: 0.05,
     },
     MOOD_BURNOUT: {
         MOOD_NORMAL: 0.00,
-        MOOD_TIRED: 0.10,
-        MOOD_STRESSED: 0.20,
-        MOOD_BURNOUT: 0.70,
+        MOOD_TIRED: 0.14,
+        MOOD_STRESSED: 0.24,
+        MOOD_BURNOUT: 0.62,
     },
 }
 
@@ -118,24 +118,24 @@ class MoodSystem:
         workload = max(0.0, min(100.0, context.workload))
 
         if workload >= 60.0:
-            probabilities[MOOD_TIRED] += 0.08
-            probabilities[MOOD_STRESSED] += 0.14
-            probabilities[MOOD_NORMAL] -= 0.10
-
-        if workload >= 85.0:
-            probabilities[MOOD_STRESSED] += 0.10
-            probabilities[MOOD_BURNOUT] += 0.06
-            probabilities[MOOD_NORMAL] -= 0.08
-
-        if context.deadline_pressure:
-            probabilities[MOOD_TIRED] += 0.08
-            probabilities[MOOD_STRESSED] += 0.10
+            probabilities[MOOD_TIRED] += 0.05
+            probabilities[MOOD_STRESSED] += 0.08
             probabilities[MOOD_NORMAL] -= 0.06
 
+        if workload >= 85.0:
+            probabilities[MOOD_STRESSED] += 0.06
+            probabilities[MOOD_BURNOUT] += 0.03
+            probabilities[MOOD_NORMAL] -= 0.05
+
+        if context.deadline_pressure:
+            probabilities[MOOD_TIRED] += 0.04
+            probabilities[MOOD_STRESSED] += 0.05
+            probabilities[MOOD_NORMAL] -= 0.04
+
         if context.has_crisis:
-            probabilities[MOOD_STRESSED] += 0.16
-            probabilities[MOOD_BURNOUT] += 0.05
-            probabilities[MOOD_NORMAL] -= 0.10
+            probabilities[MOOD_STRESSED] += 0.10
+            probabilities[MOOD_BURNOUT] += 0.03
+            probabilities[MOOD_NORMAL] -= 0.07
 
         if context.helped_recently:
             probabilities[MOOD_NORMAL] += 0.25
