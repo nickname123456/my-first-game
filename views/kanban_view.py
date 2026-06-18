@@ -2,7 +2,7 @@ import pygame
 
 from models.employee_model import EmployeeModel
 from models.task_manager_model import MAX_ASSIGNMENTS_PER_EMPLOYEE
-from models.task_model import TASK_STATUS_IN_PROGRESS, TASK_STATUS_QUEUED, TASK_STATUS_TODO, Task
+from models.task_model import TASK_STATUS_TODO, Task
 from settings import COLORS, SCREEN_HEIGHT, SCREEN_WIDTH
 from views.font_utils import get_ui_font
 
@@ -127,10 +127,6 @@ class KanbanView:
                 f"{task.required_skill} | сложн.:{task.difficulty} | ценность:{task.business_value} "
                 f"| срок:{int(task.deadline)}с | {int(task.progress)}%"
             )
-            if task.status == TASK_STATUS_IN_PROGRESS:
-                meta += f" | {task.assigned_employee}"
-            elif task.status == TASK_STATUS_QUEUED:
-                meta += f" | в очереди: {task.assigned_employee}"
             self._draw_text(surface, title, self.font, rect.x + 10, rect.y + 5)
             self._draw_text(surface, meta, self.small_font, rect.x + 10, rect.y + 25, COLORS["muted_text"])
 

@@ -62,6 +62,7 @@ def test_mouse_click_on_employee_assigns_selected_task() -> None:
     assert task.status == TASK_STATUS_IN_PROGRESS
     assert controller.employees[0].is_busy is True
     assert controller.selected_task_id is None
+    assert task.id not in [available_task.id for available_task in controller._sorted_tasks()]
 
 
 def test_busy_employee_click_queues_selected_task() -> None:
@@ -76,6 +77,7 @@ def test_busy_employee_click_queues_selected_task() -> None:
     assert task.status == TASK_STATUS_QUEUED
     assert task.id in controller.employees[0].task_queue
     assert controller.selected_task_id is None
+    assert task.id not in [available_task.id for available_task in controller._sorted_tasks()]
 
 
 def test_full_employee_click_does_not_clear_selected_task() -> None:

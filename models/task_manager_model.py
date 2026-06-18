@@ -127,6 +127,15 @@ class TaskManager:
 
         return active_tasks
 
+    def available_tasks(self) -> list[Task]:
+        available_tasks = []
+
+        for task in self.tasks:
+            if task.status == TASK_STATUS_TODO:
+                available_tasks.append(task)
+
+        return available_tasks
+
     def employee_has_capacity(self, employee: EmployeeModel) -> bool:
         return employee.assignment_count < MAX_ASSIGNMENTS_PER_EMPLOYEE
 
@@ -199,6 +208,20 @@ class TaskManager:
             priority = self.calculate_task_priority(task, current_time)
             heapq.heappush(heap, (-priority, task.id, task))
         
+        result = []
+
+        while heap:
+            item = heapq.heappop(heap)
+            result.append(item[2])
+
+        return result
+
+    def sorted_available_tasks(self, current_time: float) -> list[Task]:
+        heap: list[tuple[float, int, Task]] = []
+        for task in self.available_tasks():
+            priority = self.calculate_task_priority(task, current_time)
+            heapq.heappush(heap, (-priority, task.id, task))
+
         result = []
 
         while heap:

@@ -70,6 +70,19 @@ def test_completed_task_is_not_returned_as_active() -> None:
     assert [task.id for task in manager.sorted_active_tasks(0)] == [1]
 
 
+def test_sorted_available_tasks_returns_only_todo_tasks() -> None:
+    manager = TaskManager(initial_tasks=0)
+    manager.tasks = [
+        make_task(1, deadline=40, status=TASK_STATUS_TODO),
+        make_task(2, deadline=30, status=TASK_STATUS_IN_PROGRESS),
+        make_task(3, deadline=20, status=TASK_STATUS_QUEUED),
+        make_task(4, deadline=10, status=TASK_STATUS_DONE),
+        make_task(5, deadline=5, status=TASK_STATUS_FAILED),
+    ]
+
+    assert [task.id for task in manager.sorted_available_tasks(0)] == [1]
+
+
 def test_assign_task_marks_task_in_progress_and_employee_busy() -> None:
     manager = TaskManager(initial_tasks=0)
     employee = make_employee()

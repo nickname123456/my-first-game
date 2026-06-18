@@ -92,8 +92,7 @@ class PlayController(BaseSceneController):
             self.player_controller.handle_input(pygame.key.get_pressed(), dt)
 
     def draw(self, surface) -> None:
-        current_time = self.task_manager.elapsed_time(self.project_stats)
-        sorted_tasks = self.task_manager.sorted_active_tasks(current_time)
+        sorted_tasks = self._sorted_tasks()
         self.view.draw(
             surface,
             self.office_map,
@@ -273,7 +272,7 @@ class PlayController(BaseSceneController):
 
     def _sorted_tasks(self):
         current_time = self.task_manager.elapsed_time(self.project_stats)
-        return self.task_manager.sorted_active_tasks(current_time)
+        return self.task_manager.sorted_available_tasks(current_time)
 
     def _select_task_by_index(self, sorted_tasks) -> None:
         if not sorted_tasks:
