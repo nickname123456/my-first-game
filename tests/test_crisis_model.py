@@ -208,10 +208,36 @@ def test_crisis_timeout_applies_penalty() -> None:
         current_time=0.0,
     )
 
-    assert stats.quality == 90
-    assert stats.tech_debt == 8
+    assert stats.morale == 92
+    assert stats.quality == 82
+    assert stats.tech_debt == 15
+    assert employee.fatigue == 13
     assert employee.active_crisis_id is None
     assert crisis_manager.get_crisis(crisis.id) is None
+
+    notifications = crisis_manager.consume_notifications()
+    assert len(notifications) == 1
+    assert "Кризис проигнорирован" in notifications[0].text
+    assert "качество -18" in notifications[0].text
+
+
+def test_bad_crisis_solution_applies_scaled_penalty() -> None:
+    manager, employee, stats = make_assigned_context()
+    crisis_manager = CrisisManager(FixedRandom([0.0]))
+    crisis = crisis_manager.create_crisis(CRISIS_CRITICAL_BUG, employee, manager.tasks[0])
+
+    resolved = crisis_manager.resolve_crisis(crisis.id, 3, [employee], manager, stats)
+
+    assert resolved is True
+    assert stats.morale == 94
+    assert stats.quality == 82
+    assert stats.tech_debt == 9
+    assert stats.client_trust == 88
+
+    notifications = crisis_manager.consume_notifications()
+    assert len(notifications) == 1
+    assert "Кризис решен" in notifications[0].text
+    assert "качество -18" in notifications[0].text
 
 
 def test_burnout_solution_can_return_last_queued_task_to_todo() -> None:

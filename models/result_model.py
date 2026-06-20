@@ -9,6 +9,12 @@ from models.project_stats_model import ProjectStatsModel
 
 HIGHSCORE_FILE = "highscore.json"
 TECH_DEBT_FAILURE_LIMIT = 100
+MIN_RELEASE_TASKS_DONE = 6
+MIN_RELEASE_BUDGET = 10
+MIN_RELEASE_MORALE = 20
+MIN_RELEASE_QUALITY = 35
+MIN_RELEASE_CLIENT_TRUST = 35
+MAX_RELEASE_TECH_DEBT = 80
 
 
 @dataclass(frozen=True)
@@ -51,6 +57,22 @@ def failure_reason(stats: ProjectStatsModel) -> str | None:
         return "Доверие заказчика упало до нуля"
     if stats.tech_debt >= TECH_DEBT_FAILURE_LIMIT:
         return "Технический долг стал критическим"
+    return None
+
+
+def release_failure_reason(stats: ProjectStatsModel) -> str | None:
+    if stats.tasks_done < MIN_RELEASE_TASKS_DONE:
+        return f"Релиз провален: выполнено {stats.tasks_done}/{MIN_RELEASE_TASKS_DONE} задач"
+    if stats.budget < MIN_RELEASE_BUDGET:
+        return "Релиз провален: бюджет ниже безопасного минимума"
+    if stats.morale < MIN_RELEASE_MORALE:
+        return "Релиз провален: команда слишком деморализована"
+    if stats.quality < MIN_RELEASE_QUALITY:
+        return "Релиз провален: качество продукта слишком низкое"
+    if stats.client_trust < MIN_RELEASE_CLIENT_TRUST:
+        return "Релиз провален: доверие заказчика слишком низкое"
+    if stats.tech_debt > MAX_RELEASE_TECH_DEBT:
+        return "Релиз провален: технический долг слишком высокий"
     return None
 
 
@@ -119,10 +141,14 @@ def determine_game_result(
         return build_game_result(stats, False, reason, high_score_path)
 
     if stats.release_time_left <= 0:
+        release_reason = release_failure_reason(stats)
+        if release_reason is not None:
+            return build_game_result(stats, False, release_reason, high_score_path)
+
         return build_game_result(
             stats,
             True,
-            "Время релиза закончилось, ключевые ресурсы сохранены",
+            "Релиз успешен: минимум задач выполнен, ключевые ресурсы сохранены",
             high_score_path,
         )
 

@@ -227,3 +227,42 @@ def test_overdue_unfinished_task_becomes_failed() -> None:
 
     assert manager.tasks[0].status == TASK_STATUS_FAILED
     assert employee.is_busy is False
+    assert stats.budget == 98
+    assert stats.morale == 96
+    assert stats.quality == 97
+    assert stats.tech_debt == 1
+    assert stats.client_trust == 93
+
+    notifications = manager.consume_notifications()
+    assert len(notifications) == 1
+    assert "Просрочена задача" in notifications[0].text
+
+    manager.update(0.1, [employee], stats)
+
+    assert stats.budget == 98
+    assert manager.consume_notifications() == []
+
+
+def test_mismatch_task_completion_applies_stronger_penalty() -> None:
+    manager = TaskManager(initial_tasks=0, spawn_interval=999)
+    employee = make_employee()
+    stats = ProjectStatsModel()
+    manager.tasks = [
+        make_task(
+            1,
+            deadline=40,
+            estimated_time=1,
+            required_skill="frontend",
+        )
+    ]
+    manager.assign_task(1, employee)
+    employee.state = EMPLOYEE_STATE_WORKING
+    employee.ready_to_work = True
+
+    manager.update(2.0, [employee], stats)
+
+    assert manager.tasks[0].status == TASK_STATUS_DONE
+    assert stats.morale == 98
+    assert stats.quality == 95
+    assert stats.client_trust == 97
+    assert stats.tech_debt >= 8

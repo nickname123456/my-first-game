@@ -11,6 +11,7 @@ from models.employee_model import (
     EMPLOYEE_STATE_WORKING,
     EmployeeModel,
 )
+from models.notification_model import NOTIFICATION_DANGER, NotificationModel
 from models.project_stats_model import ProjectStatsModel
 from models.task_model import (
     TASK_STATUS_DONE,
@@ -28,6 +29,7 @@ QUEUE_FATIGUE_PER_TASK_PER_SECOND = 0.25
 MIN_FATIGUE_PROGRESS_MULTIPLIER = 0.65
 DEADLINE_ESTIMATE_MULTIPLIER = 2.4
 DEADLINE_TRAVEL_BUFFER = 28.0
+MISMATCH_TECH_DEBT_DRIFT_PER_SECOND = 0.45
 
 
 @dataclass(frozen=True)
@@ -55,6 +57,7 @@ class TaskManager:
         self._next_template_index = 0
         self._task_pool = self._build_task_pool()
         self._tech_debt_drift = 0.0
+        self.notifications: list[NotificationModel] = []
 
         for _ in range(initial_tasks):
             self.spawn_task(current_time=0.0)
@@ -72,9 +75,14 @@ class TaskManager:
             self.spawn_timer -= self.spawn_interval
             self.spawn_task(current_time)
 
-        self._fail_overdue_tasks(current_time, employees)
+        self._fail_overdue_tasks(current_time, employees, stats)
         self._update_in_progress_tasks(dt, employees, stats)
         self.sync_stats(stats)
+
+    def consume_notifications(self) -> list[NotificationModel]:
+        notifications = self.notifications[:]
+        self.notifications.clear()
+        return notifications
 
     def elapsed_time(self, stats: ProjectStatsModel) -> float:
         return self.release_duration - stats.release_time_left
@@ -309,7 +317,7 @@ class TaskManager:
                 )
 
             if task.required_skill != employee.role:
-                self._tech_debt_drift += 0.35 * dt
+                self._tech_debt_drift += MISMATCH_TECH_DEBT_DRIFT_PER_SECOND * dt
                 if self._tech_debt_drift >= 1.0:
                     gained_debt = int(self._tech_debt_drift)
                     self._tech_debt_drift -= gained_debt
@@ -321,7 +329,12 @@ class TaskManager:
                 if task.required_skill == employee.role:
                     stats.apply_changes(quality=1, morale=1)
                 else:
-                    stats.apply_changes(quality=-3, tech_debt=4)
+                    stats.apply_changes(
+                        morale=-2,
+                        quality=-5,
+                        tech_debt=8,
+                        client_trust=-3,
+                    )
                 self._release_employee(employee)
 
 
@@ -330,17 +343,43 @@ class TaskManager:
         self,
         current_time: float,
         employees: list[EmployeeModel],
+        stats: ProjectStatsModel,
     ) -> None:
         for task in self.tasks:
             if task.is_active and current_time > task.deadline:
                 task.status = TASK_STATUS_FAILED
                 task.progress = min(task.progress, 99.0)
+                self._apply_overdue_penalty(task, stats)
                 assigned = self._find_employee_by_task(task.id, employees)
                 if assigned is not None:
                     if assigned.current_task_id == task.id:
                         self._release_employee(assigned)
                     elif task.id in assigned.task_queue:
                         assigned.task_queue.remove(task.id)
+
+    def _apply_overdue_penalty(self, task: Task, stats: ProjectStatsModel) -> None:
+        budget = -2
+        morale = -(3 + task.difficulty // 2)
+        quality = -(2 + task.difficulty // 2)
+        tech_debt = max(1, task.difficulty // 2)
+        client_trust = -(5 + task.business_value // 2)
+        stats.apply_changes(
+            budget=budget,
+            morale=morale,
+            quality=quality,
+            tech_debt=tech_debt,
+            client_trust=client_trust,
+        )
+        self.notifications.append(
+            NotificationModel(
+                (
+                    f"Просрочена задача: {task.title}. "
+                    f"Бюджет {budget}, мораль {morale}, качество {quality}, "
+                    f"долг +{tech_debt}, доверие {client_trust}"
+                ),
+                severity=NOTIFICATION_DANGER,
+            )
+        )
 
 
 

@@ -9,6 +9,12 @@ from models.employee_model import (
     EmployeeModel,
 )
 from models.mood_model import MOOD_BURNOUT, MOOD_STRESSED, MOOD_TIRED
+from models.notification_model import (
+    NOTIFICATION_DANGER,
+    NOTIFICATION_INFO,
+    NOTIFICATION_WARNING,
+    NotificationModel,
+)
 from models.project_stats_model import ProjectStatsModel
 from models.task_manager_model import TaskManager
 from models.task_model import Task
@@ -20,13 +26,17 @@ CRISIS_CONFLICT = "conflict"
 CRISIS_INFRASTRUCTURE_OUTAGE = "infrastructure_outage"
 CRISIS_TECH_DEBT_ISSUE = "tech_debt_issue"
 
-CRISIS_ROLL_INTERVAL = 10.0
+CRISIS_ROLL_INTERVAL = 8.0
 CRISIS_GRACE_PERIOD = 25.0
 MAX_ACTIVE_CRISES = 1
-TEAM_CRISIS_COOLDOWN = 20.0
-EMPLOYEE_CRISIS_COOLDOWN = 45.0
+TEAM_CRISIS_COOLDOWN = 14.0
+EMPLOYEE_CRISIS_COOLDOWN = 30.0
 MIN_TASK_PROGRESS_FOR_CRISIS = 20.0
-PRD_GROWTH_PER_FAILED_ROLL = 0.35
+PRD_GROWTH_PER_FAILED_ROLL = 0.45
+CRISIS_BAD_DECISION_RESOURCE_MULTIPLIER = 1.5
+CRISIS_BAD_DECISION_FATIGUE_MULTIPLIER = 1.4
+CRISIS_TIMEOUT_RESOURCE_MULTIPLIER = 1.8
+CRISIS_TIMEOUT_FATIGUE_MULTIPLIER = 1.6
 
 
 @dataclass(frozen=True)
@@ -268,6 +278,12 @@ class CrisisManager:
         self._next_crisis_id = 1
         self.active_crises: dict[int, Crisis] = {}
         self.failed_rolls: dict[str, int] = {}
+        self.notifications: list[NotificationModel] = []
+
+    def consume_notifications(self) -> list[NotificationModel]:
+        notifications = self.notifications[:]
+        self.notifications.clear()
+        return notifications
 
     def update(
         self,
@@ -319,7 +335,7 @@ class CrisisManager:
         failed_rolls = self.failed_rolls.get(employee.name, 0)
         chance = min(
             base_chance * (1.0 + PRD_GROWTH_PER_FAILED_ROLL * failed_rolls),
-            0.35,
+            0.45,
         )
 
         if self.rng.random() < chance:
@@ -339,7 +355,7 @@ class CrisisManager:
         current_time: float,
     ) -> float:
         load = task_manager.calculate_employee_load(employee, current_time)
-        chance = 0.012
+        chance = 0.016
         chance += task.difficulty * 0.004
         chance += employee.fatigue * 0.0005
         chance += load * 0.00035
@@ -407,7 +423,20 @@ class CrisisManager:
             return False
 
         option = definition.options[option_index]
-        self._apply_effect(option.effect, crisis, employee, task_manager, stats)
+        effect = option.effect
+        if not option.helpful:
+            effect = self._scale_effect(
+                effect,
+                CRISIS_BAD_DECISION_RESOURCE_MULTIPLIER,
+                CRISIS_BAD_DECISION_FATIGUE_MULTIPLIER,
+            )
+        self._apply_effect(effect, crisis, employee, task_manager, stats)
+        self.notifications.append(
+            NotificationModel(
+                f"Кризис решен: {definition.title}. {describe_effect(effect)}",
+                severity=self._notification_severity(effect, option.helpful),
+            )
+        )
         if option.helpful:
             employee.recent_help_timer = 15.0
 
@@ -437,7 +466,18 @@ class CrisisManager:
                 del self.active_crises[crisis.id]
                 continue
             definition = self.get_definition(crisis)
-            self._apply_effect(definition.timeout_effect, crisis, employee, task_manager, stats)
+            effect = self._scale_effect(
+                definition.timeout_effect,
+                CRISIS_TIMEOUT_RESOURCE_MULTIPLIER,
+                CRISIS_TIMEOUT_FATIGUE_MULTIPLIER,
+            )
+            self._apply_effect(effect, crisis, employee, task_manager, stats)
+            self.notifications.append(
+                NotificationModel(
+                    f"Кризис проигнорирован: {definition.title}. {describe_effect(effect)}",
+                    severity=NOTIFICATION_DANGER,
+                )
+            )
             self._close_crisis(crisis, employee)
 
     def _update_cooldowns(self, dt: float) -> None:
@@ -483,6 +523,48 @@ class CrisisManager:
             employee.ready_to_work = False
         elif employee.state == EMPLOYEE_STATE_BURNOUT and employee.fatigue < 95.0:
             employee.state = EMPLOYEE_STATE_IDLE
+
+    def _scale_effect(
+        self,
+        effect: CrisisEffect,
+        resource_multiplier: float,
+        fatigue_multiplier: float,
+    ) -> CrisisEffect:
+        return CrisisEffect(
+            budget=self._scale_negative(effect.budget, resource_multiplier),
+            morale=self._scale_negative(effect.morale, resource_multiplier),
+            quality=self._scale_negative(effect.quality, resource_multiplier),
+            tech_debt=self._scale_positive(effect.tech_debt, resource_multiplier),
+            client_trust=self._scale_negative(effect.client_trust, resource_multiplier),
+            fatigue=self._scale_positive(effect.fatigue, fatigue_multiplier),
+            deadline_delta=effect.deadline_delta,
+            mood=effect.mood,
+            remove_last_queued_task=effect.remove_last_queued_task,
+        )
+
+    def _scale_negative(self, value: int, multiplier: float) -> int:
+        if value >= 0:
+            return value
+        return -int(abs(value) * multiplier + 0.9999)
+
+    def _scale_positive(self, value: int, multiplier: float) -> int:
+        if value <= 0:
+            return value
+        return int(value * multiplier + 0.9999)
+
+    def _notification_severity(self, effect: CrisisEffect, helpful: bool) -> str:
+        if not helpful:
+            return NOTIFICATION_DANGER
+        if (
+            effect.budget < 0
+            or effect.morale < 0
+            or effect.quality < 0
+            or effect.client_trust < 0
+            or effect.tech_debt > 0
+            or effect.fatigue > 0
+        ):
+            return NOTIFICATION_WARNING
+        return NOTIFICATION_INFO
 
     def _close_crisis(self, crisis: Crisis, employee: EmployeeModel) -> None:
         self.active_crises.pop(crisis.id, None)

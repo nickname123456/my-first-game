@@ -6,6 +6,7 @@ from models.employee_behavior_model import EmployeeBehaviorSystem
 from controllers.player_controller import PlayerController
 from models.employee_model import EmployeeModel
 from models.mood_model import MoodSystem
+from models.notification_model import NotificationModel
 from models.office_map_model import OfficeMapModel
 from models.player_model import PlayerModel
 from models.project_stats_model import ProjectStatsModel
@@ -49,6 +50,7 @@ class PlayController(BaseSceneController):
         self.selected_employee_index = 0
         self.active_crisis_dialog_id: int | None = None
         self.selected_crisis_option_index = 0
+        self.notifications: list[NotificationModel] = []
         self.finished = False
         self.final_result: GameResult | None = None
         self.view = PlayView()
@@ -82,9 +84,11 @@ class PlayController(BaseSceneController):
             0.0,
             self.project_stats.release_time_left - dt,
         )
+        self._update_notifications(dt)
         current_time = self.task_manager.elapsed_time(self.project_stats)
         self.employee_behavior.update(dt, self.employees, self.office_map)
         self.task_manager.update(dt, self.employees, self.project_stats)
+        self._consume_model_notifications()
         self.mood_system.update(dt, self.employees, self.task_manager, current_time)
         self.crisis_manager.update(
             dt,
@@ -93,6 +97,7 @@ class PlayController(BaseSceneController):
             self.project_stats,
             current_time,
         )
+        self._consume_model_notifications()
         if self.crisis_manager.get_crisis(self.active_crisis_dialog_id) is None:
             self.active_crisis_dialog_id = None
             self.selected_crisis_option_index = 0
@@ -121,6 +126,7 @@ class PlayController(BaseSceneController):
             self.selected_employee_index,
             self.active_crisis_dialog_id,
             self.selected_crisis_option_index,
+            self.notifications,
         )
 
     def _handle_kanban_event(self, event) -> None:
@@ -280,6 +286,7 @@ class PlayController(BaseSceneController):
             self.project_stats,
         )
         if resolved:
+            self._consume_model_notifications()
             self.active_crisis_dialog_id = None
             self.selected_crisis_option_index = 0
 
@@ -385,3 +392,15 @@ class PlayController(BaseSceneController):
         show_result = getattr(self.game_controller, "show_result", None)
         if callable(show_result):
             show_result(result)
+
+    def _consume_model_notifications(self) -> None:
+        self.notifications.extend(self.task_manager.consume_notifications())
+        self.notifications.extend(self.crisis_manager.consume_notifications())
+
+    def _update_notifications(self, dt: float) -> None:
+        active_notifications = []
+        for notification in self.notifications:
+            notification.time_left -= dt
+            if notification.time_left > 0.0:
+                active_notifications.append(notification)
+        self.notifications = active_notifications
