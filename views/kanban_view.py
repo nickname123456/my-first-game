@@ -1,7 +1,7 @@
 import pygame
 
 from models.employee_model import EmployeeModel
-from models.task_manager_model import MAX_ASSIGNMENTS_PER_EMPLOYEE
+from models.task_manager_model import MAX_ASSIGNMENTS_PER_EMPLOYEE, TaskCounters
 from models.task_model import TASK_STATUS_TODO, Task
 from settings import COLORS, SCREEN_HEIGHT, SCREEN_WIDTH
 from views.font_utils import get_ui_font
@@ -25,6 +25,7 @@ class KanbanView:
         selected_task_id: int | None,
         selected_task_index: int,
         selected_employee_index: int,
+        task_counters: TaskCounters,
     ) -> None:
         overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
         overlay.fill((0, 0, 0, 150))
@@ -39,7 +40,9 @@ class KanbanView:
         self._draw_text(surface, "X", self.font, self.close_rect.x + 8, self.close_rect.y + 3)
         pygame.draw.rect(surface, COLORS["grid"], self.close_rect, 1, border_radius=4)
 
-        tasks_title_y = panel.top + 62
+        self._draw_task_counters(surface, task_counters, panel.left + 24, panel.top + 58)
+
+        tasks_title_y = panel.top + 98
         self._draw_text(surface, "Задачи по приоритету", self.font, panel.left + 24, tasks_title_y)
         self._draw_text(surface, "Сотрудники", self.font, panel.left + 610, tasks_title_y)
 
@@ -49,7 +52,7 @@ class KanbanView:
             selected_task_id,
             selected_task_index,
             panel.left + 22,
-            panel.top + 94,
+            panel.top + 130,
         )
         selected_task = self._get_selected_task(tasks, selected_task_id)
         self.employee_rects = self._draw_employees(
@@ -58,7 +61,7 @@ class KanbanView:
             selected_task,
             selected_employee_index,
             panel.left + 610,
-            panel.top + 94,
+            panel.top + 130,
         )
 
         self.assign_rect = pygame.Rect(panel.left + 610, panel.bottom - 64, 250, 40)
@@ -80,6 +83,32 @@ class KanbanView:
 
         help_text = "Выберите задачу" if selected_task is None else "Выберите исполнителя"
         self._draw_text(surface, help_text, self.small_font, panel.left + 24, panel.bottom - 38)
+
+    def _draw_task_counters(
+        self,
+        surface,
+        counters: TaskCounters,
+        x: int,
+        y: int,
+    ) -> None:
+        badges = [
+            ("Новые", counters.new_count, (64, 87, 109)),
+            ("Активные", counters.active_count, (82, 92, 145)),
+            ("Успешные", counters.successful_count, (54, 91, 72)),
+            ("Просроченные", counters.overdue_count, (105, 52, 58)),
+        ]
+
+        for index, (label, value, fill) in enumerate(badges):
+            rect = pygame.Rect(x + index * 162, y, 150, 28)
+            pygame.draw.rect(surface, fill, rect, border_radius=4)
+            pygame.draw.rect(surface, COLORS["grid"], rect, 1, border_radius=4)
+            self._draw_text(
+                surface,
+                f"{label}: {value}",
+                self.small_font,
+                rect.x + 10,
+                rect.y + 5,
+            )
 
     def hit_test(self, pos: tuple[int, int]) -> tuple[str | None, int]:
         if self.close_rect.collidepoint(pos):

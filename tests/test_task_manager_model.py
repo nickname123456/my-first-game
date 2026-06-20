@@ -266,3 +266,39 @@ def test_mismatch_task_completion_applies_stronger_penalty() -> None:
     assert stats.quality == 95
     assert stats.client_trust == 97
     assert stats.tech_debt >= 8
+
+
+def test_initial_tasks_do_not_create_new_task_notifications() -> None:
+    manager = TaskManager(initial_tasks=3, spawn_interval=999)
+
+    assert manager.consume_notifications() == []
+
+
+def test_timer_spawn_creates_new_task_notification() -> None:
+    manager = TaskManager(initial_tasks=0, spawn_interval=1.0)
+    stats = ProjectStatsModel()
+
+    manager.update(1.0, [], stats)
+
+    notifications = manager.consume_notifications()
+    assert len(notifications) == 1
+    assert "Новая задача:" in notifications[0].text
+    assert "срок" in notifications[0].text
+
+
+def test_task_counters_split_new_active_successful_and_overdue() -> None:
+    manager = TaskManager(initial_tasks=0)
+    manager.tasks = [
+        make_task(1, deadline=40, status=TASK_STATUS_TODO),
+        make_task(2, deadline=40, status=TASK_STATUS_QUEUED),
+        make_task(3, deadline=40, status=TASK_STATUS_IN_PROGRESS),
+        make_task(4, deadline=40, status=TASK_STATUS_DONE),
+        make_task(5, deadline=40, status=TASK_STATUS_FAILED),
+    ]
+
+    counters = manager.task_counters()
+
+    assert counters.new_count == 1
+    assert counters.active_count == 2
+    assert counters.successful_count == 1
+    assert counters.overdue_count == 1

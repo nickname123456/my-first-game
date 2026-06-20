@@ -127,6 +127,7 @@ class PlayController(BaseSceneController):
             self.active_crisis_dialog_id,
             self.selected_crisis_option_index,
             self.notifications,
+            self.task_manager.task_counters(),
         )
 
     def _handle_kanban_event(self, event) -> None:

@@ -11,7 +11,7 @@ from models.employee_model import (
     EMPLOYEE_STATE_WORKING,
     EmployeeModel,
 )
-from models.notification_model import NOTIFICATION_DANGER, NotificationModel
+from models.notification_model import NOTIFICATION_DANGER, NOTIFICATION_INFO, NotificationModel
 from models.project_stats_model import ProjectStatsModel
 from models.task_model import (
     TASK_STATUS_DONE,
@@ -40,6 +40,14 @@ class TaskTemplate:
     deadline_offset: float
     business_value: int
     estimated_time: float
+
+
+@dataclass(frozen=True)
+class TaskCounters:
+    new_count: int = 0
+    active_count: int = 0
+    successful_count: int = 0
+    overdue_count: int = 0
 
 
 class TaskManager:
@@ -73,7 +81,9 @@ class TaskManager:
 
         while self.spawn_timer >= self.spawn_interval:
             self.spawn_timer -= self.spawn_interval
-            self.spawn_task(current_time)
+            task = self.spawn_task(current_time)
+            if task is not None:
+                self._notify_new_task(task)
 
         self._fail_overdue_tasks(current_time, employees, stats)
         self._update_in_progress_tasks(dt, employees, stats)
@@ -83,6 +93,29 @@ class TaskManager:
         notifications = self.notifications[:]
         self.notifications.clear()
         return notifications
+
+    def task_counters(self) -> TaskCounters:
+        new_count = 0
+        active_count = 0
+        successful_count = 0
+        overdue_count = 0
+
+        for task in self.tasks:
+            if task.status == TASK_STATUS_TODO:
+                new_count += 1
+            elif task.status in (TASK_STATUS_QUEUED, TASK_STATUS_IN_PROGRESS):
+                active_count += 1
+            elif task.status == TASK_STATUS_DONE:
+                successful_count += 1
+            elif task.status == TASK_STATUS_FAILED:
+                overdue_count += 1
+
+        return TaskCounters(
+            new_count=new_count,
+            active_count=active_count,
+            successful_count=successful_count,
+            overdue_count=overdue_count,
+        )
 
     def elapsed_time(self, stats: ProjectStatsModel) -> float:
         return self.release_duration - stats.release_time_left
@@ -110,6 +143,14 @@ class TaskManager:
         self._next_task_id += 1
         self.tasks.append(task)
         return task
+
+    def _notify_new_task(self, task: Task) -> None:
+        self.notifications.append(
+            NotificationModel(
+                f"Новая задача: {task.title} | {task.required_skill} | срок {int(task.deadline)}с",
+                severity=NOTIFICATION_INFO,
+            )
+        )
 
     def assign_task(self, task_id: int, employee: EmployeeModel) -> bool:
         task = self.get_task(task_id)

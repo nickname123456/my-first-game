@@ -6,6 +6,7 @@ import pygame
 
 from controllers.play_controller import PlayController
 from models.task_model import TASK_STATUS_IN_PROGRESS, TASK_STATUS_QUEUED, TASK_STATUS_TODO
+from settings import SCREEN_HEIGHT, SCREEN_WIDTH
 
 
 class DummyGameController:
@@ -92,3 +93,10 @@ def test_full_employee_click_does_not_clear_selected_task() -> None:
 
     assert task.status == TASK_STATUS_TODO
     assert controller.selected_task_id == task.id
+
+
+def test_draw_open_kanban_passes_task_counters_to_view() -> None:
+    controller = make_controller()
+    surface = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
+
+    controller.draw(surface)

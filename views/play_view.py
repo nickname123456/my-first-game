@@ -4,7 +4,7 @@ from models.notification_model import NotificationModel
 from models.office_map_model import OfficeMapModel
 from models.player_model import PlayerModel
 from models.project_stats_model import ProjectStatsModel
-from models.task_manager_model import TaskManager
+from models.task_manager_model import TaskCounters, TaskManager
 from models.task_model import Task
 from views.crisis_dialog_view import CrisisDialogView
 from views.employee_view import EmployeeView
@@ -42,6 +42,7 @@ class PlayView:
         active_crisis_dialog_id: int | None,
         selected_crisis_option_index: int,
         notifications: list[NotificationModel],
+        task_counters: TaskCounters,
     ) -> None:
         self.office_map_view.draw(surface, office_map)
         self.employee_view.draw(surface, employees, task_manager, crisis_manager)
@@ -56,6 +57,7 @@ class PlayView:
                 selected_task_id,
                 selected_task_index,
                 selected_employee_index,
+                task_counters,
             )
         if active_crisis_dialog_id is not None:
             self.crisis_dialog_view.draw(
