@@ -1,5 +1,5 @@
-from models.office_map_model import OfficeMapModel
-from models.pathfinding_model import astar_path
+from models.world.office_map_model import OfficeMapModel
+from models.algorithms.pathfinding_model import astar_path
 
 
 EXPECTED_WORKPLACES = {

@@ -1,7 +1,7 @@
 import pytest
 
-from models.project_stats_model import ProjectStatsModel
-from models.result_model import (
+from models.entities.project_stats_model import ProjectStatsModel
+from models.results.result_model import (
     MAX_RELEASE_TECH_DEBT,
     MIN_RELEASE_BUDGET,
     MIN_RELEASE_CLIENT_TRUST,

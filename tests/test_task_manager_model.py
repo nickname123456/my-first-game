@@ -1,7 +1,7 @@
-from models.employee_model import EMPLOYEE_STATE_WORKING, EmployeeModel
-from models.project_stats_model import ProjectStatsModel
-from models.task_manager_model import TaskManager
-from models.task_model import (
+from models.entities.employee_model import EMPLOYEE_STATE_WORKING, EmployeeModel
+from models.entities.project_stats_model import ProjectStatsModel
+from models.systems.task_manager_model import TaskManager
+from models.entities.task_model import (
     TASK_STATUS_DONE,
     TASK_STATUS_IN_PROGRESS,
     TASK_STATUS_QUEUED,

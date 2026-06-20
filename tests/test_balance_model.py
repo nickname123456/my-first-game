@@ -5,8 +5,8 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 
 import pygame
 
-from controllers.play_controller import PlayController
-from models.crisis_model import CrisisManager
+from controllers.scenes.play_controller import PlayController
+from models.systems.crisis_model import CrisisManager
 
 
 class DummyGameController:

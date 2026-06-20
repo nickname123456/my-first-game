@@ -1,7 +1,7 @@
 import random
 
-from models.employee_model import EmployeeModel
-from models.mood_model import (
+from models.entities.employee_model import EmployeeModel
+from models.systems.mood_model import (
     MOOD_NORMAL,
     MOOD_STRESSED,
     MOOD_TIRED,

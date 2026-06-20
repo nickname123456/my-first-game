@@ -1,7 +1,7 @@
 import random
 
-from models.employee_behavior_model import EmployeeBehaviorSystem
-from models.employee_model import (
+from models.systems.employee_behavior_model import EmployeeBehaviorSystem
+from models.entities.employee_model import (
     EMPLOYEE_STATE_GOING_TO_KANBAN,
     EMPLOYEE_STATE_GOING_TO_WORK,
     EMPLOYEE_STATE_NEEDS_HELP,
@@ -9,7 +9,7 @@ from models.employee_model import (
     EMPLOYEE_STATE_WORKING,
     EmployeeModel,
 )
-from models.office_map_model import OfficeMapModel
+from models.world.office_map_model import OfficeMapModel
 from settings import CHARACTER_HITBOX_HEIGHT, CHARACTER_HITBOX_WIDTH
 
 

@@ -1,7 +1,7 @@
 import pygame
 
 from settings import COLORS, FPS, SCREEN_HEIGHT, SCREEN_WIDTH, WINDOW_TITLE
-from controllers.game_controller import GameController
+from controllers.core.game_controller import GameController
 
 
 class Game:

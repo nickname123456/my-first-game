@@ -1,8 +1,8 @@
-from models.crisis_model import CRISIS_CRITICAL_BUG, CRISIS_DEFINITIONS, CrisisManager
-from models.employee_model import EmployeeModel
-from models.project_stats_model import ProjectStatsModel
-from models.task_manager_model import TaskManager
-from models.task_model import Task
+from models.systems.crisis_model import CRISIS_CRITICAL_BUG, CRISIS_DEFINITIONS, CrisisManager
+from models.entities.employee_model import EmployeeModel
+from models.entities.project_stats_model import ProjectStatsModel
+from models.systems.task_manager_model import TaskManager
+from models.entities.task_model import Task
 from settings import CHARACTER_HITBOX_HEIGHT, CHARACTER_HITBOX_WIDTH
 
 

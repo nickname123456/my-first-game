@@ -4,8 +4,8 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 
 import pygame
 
-from controllers.play_controller import PlayController
-from models.task_model import TASK_STATUS_IN_PROGRESS, TASK_STATUS_QUEUED, TASK_STATUS_TODO
+from controllers.scenes.play_controller import PlayController
+from models.entities.task_model import TASK_STATUS_IN_PROGRESS, TASK_STATUS_QUEUED, TASK_STATUS_TODO
 
 
 class DummyGameController:

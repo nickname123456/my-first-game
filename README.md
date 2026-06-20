@@ -313,10 +313,10 @@ score = int(score * multiplier)
 
 ## Архитектура
 
-Текущая версия построена на MVC:
+Текущая версия построена на MVC с дополнительной смысловой группировкой внутри каждого слоя:
 
-- **Model** хранит данные и игровую логику без зависимости от `pygame`;
-- **View** отвечает только за отрисовку;
+- **Model** хранит данные, алгоритмы и игровые системы без зависимости от `pygame`;
+- **View** отвечает только за отрисовку и разделен на экраны, игровые сущности, виджеты и общие утилиты;
 - **Controller** обрабатывает ввод, обновляет модели и управляет переходами между сценами.
 
 `game.py` остается композиционным корнем pygame-приложения: создает окно, запускает цикл, читает события pygame и делегирует работу `GameController`.
@@ -327,39 +327,57 @@ my-first-game/
 |-- game.py
 |-- settings.py
 |-- controllers/
-|   |-- game_controller.py
-|   |-- player_controller.py
-|   |-- menu_controller.py
-|   |-- play_controller.py
-|   |-- game_over_controller.py
-|   `-- result_controller.py
+|   |-- core/
+|   |   |-- base_scene_controller.py
+|   |   `-- game_controller.py
+|   |-- input/
+|   |   `-- player_controller.py
+|   `-- scenes/
+|       |-- game_over_controller.py
+|       |-- intro_controller.py
+|       |-- menu_controller.py
+|       |-- play_controller.py
+|       `-- result_controller.py
 |-- models/
-|   |-- behavior_tree_model.py
-|   |-- crisis_model.py
-|   |-- employee_behavior_model.py
-|   |-- employee_model.py
-|   |-- mood_model.py
-|   |-- office_map_model.py
-|   |-- pathfinding_model.py
-|   |-- player_model.py
-|   |-- project_stats_model.py
-|   |-- result_model.py
-|   |-- task_manager_model.py
-|   `-- task_model.py
+|   |-- algorithms/
+|   |   |-- behavior_tree_model.py
+|   |   `-- pathfinding_model.py
+|   |-- entities/
+|   |   |-- employee_model.py
+|   |   |-- notification_model.py
+|   |   |-- player_model.py
+|   |   |-- project_stats_model.py
+|   |   `-- task_model.py
+|   |-- results/
+|   |   `-- result_model.py
+|   |-- systems/
+|   |   |-- crisis_model.py
+|   |   |-- employee_behavior_model.py
+|   |   |-- mood_model.py
+|   |   `-- task_manager_model.py
+|   `-- world/
+|       `-- office_map_model.py
 |-- views/
-|   |-- crisis_dialog_view.py
-|   |-- employee_view.py
-|   |-- font_utils.py
-|   |-- game_over_view.py
-|   |-- hud_view.py
-|   |-- kanban_view.py
-|   |-- menu_view.py
-|   |-- office_map_view.py
-|   |-- player_view.py
-|   |-- play_view.py
-|   `-- result_view.py
+|   |-- entities/
+|   |   |-- employee_view.py
+|   |   |-- office_map_view.py
+|   |   `-- player_view.py
+|   |-- scenes/
+|   |   |-- game_over_view.py
+|   |   |-- intro_view.py
+|   |   |-- menu_view.py
+|   |   |-- play_view.py
+|   |   `-- result_view.py
+|   |-- shared/
+|   |   `-- font_utils.py
+|   `-- widgets/
+|       |-- crisis_dialog_view.py
+|       |-- gameplay_hint_view.py
+|       |-- hud_view.py
+|       |-- kanban_view.py
+|       `-- notification_view.py
 `-- tests/
-    `-- .gitkeep
+    `-- test_*.py
 ```
 
 ## Роли компонентов

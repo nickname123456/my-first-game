@@ -1,4 +1,4 @@
-from models.pathfinding_model import astar_path
+from models.algorithms.pathfinding_model import astar_path
 
 
 class SimpleGrid:
