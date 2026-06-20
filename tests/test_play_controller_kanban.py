@@ -90,6 +90,26 @@ def test_mouse_click_on_employee_assigns_selected_task() -> None:
     assert task.id not in [available_task.id for available_task in controller._sorted_tasks()]
 
 
+def test_tutorial_advances_after_first_assignment() -> None:
+    controller = make_controller()
+    controller.kanban_open = False
+
+    assert controller.tutorial_opened_kanban is False
+    assert controller._gameplay_hint() is not None
+
+    controller._open_kanban()
+    assert controller.tutorial_opened_kanban is True
+    assert controller.tutorial_selected_task is False
+
+    sorted_tasks = controller._sorted_tasks()
+    controller._select_task_by_index(sorted_tasks)
+    assert controller.tutorial_selected_task is True
+
+    controller._assign_selected_task()
+    assert controller.tutorial_assigned_task is True
+    assert controller.tutorial_crisis_hint_timer > 0.0
+
+
 def test_busy_employee_click_queues_selected_task() -> None:
     controller = make_controller()
     task = controller._sorted_tasks()[0]

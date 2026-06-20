@@ -24,7 +24,7 @@ class ResultView:
             )
             return
 
-        panel = pygame.Rect(250, 76, SCREEN_WIDTH - 500, SCREEN_HEIGHT - 132)
+        panel = pygame.Rect(120, 58, SCREEN_WIDTH - 240, SCREEN_HEIGHT - 116)
         pygame.draw.rect(surface, (35, 39, 46), panel, border_radius=8)
         pygame.draw.rect(surface, COLORS["grid"], panel, width=2, border_radius=8)
 

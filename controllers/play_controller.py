@@ -29,6 +29,9 @@ from settings import (
 from views.play_view import PlayView
 
 
+TUTORIAL_CRISIS_HINT_TIME = 8.0
+
+
 class PlayController(BaseSceneController):
     def __init__(self, game_controller) -> None:
         self.game_controller = game_controller
@@ -57,6 +60,10 @@ class PlayController(BaseSceneController):
         self.active_crisis_dialog_id: int | None = None
         self.selected_crisis_option_index = 0
         self.notifications: list[NotificationModel] = []
+        self.tutorial_opened_kanban = False
+        self.tutorial_selected_task = False
+        self.tutorial_assigned_task = False
+        self.tutorial_crisis_hint_timer = 0.0
         self.finished = False
         self.final_result: GameResult | None = None
         self.view = PlayView()
@@ -92,6 +99,7 @@ class PlayController(BaseSceneController):
             0.0,
             self.project_stats.release_time_left - dt,
         )
+        self._update_tutorial(dt)
         self._update_notifications(dt)
         current_time = self.task_manager.elapsed_time(self.project_stats)
         self.employee_behavior.update(dt, self.employees, self.office_map)
@@ -137,6 +145,7 @@ class PlayController(BaseSceneController):
             self.notifications,
             self.task_manager.task_counters(),
             self._can_early_release(),
+            self._gameplay_hint(),
         )
 
     def _handle_kanban_event(self, event) -> None:
@@ -269,6 +278,7 @@ class PlayController(BaseSceneController):
 
     def _open_kanban(self) -> None:
         self.kanban_open = True
+        self.tutorial_opened_kanban = True
         self._clamp_kanban_selection()
 
     def _assign_selected_task(self) -> None:
@@ -287,6 +297,8 @@ class PlayController(BaseSceneController):
         assigned = self.task_manager.assign_task(task.id, employee)
         if assigned:
             self.selected_task_id = None
+            self.tutorial_assigned_task = True
+            self.tutorial_crisis_hint_timer = TUTORIAL_CRISIS_HINT_TIME
         self._clamp_kanban_selection()
 
     def _resolve_active_crisis(self, option_index: int) -> None:
@@ -354,6 +366,7 @@ class PlayController(BaseSceneController):
             len(sorted_tasks) - 1,
         )
         self.selected_task_id = sorted_tasks[self.selected_task_index].id
+        self.tutorial_selected_task = True
 
     def _move_selection(self, current: int, delta: int, count: int) -> int:
         if count <= 0:
@@ -455,3 +468,46 @@ class PlayController(BaseSceneController):
             if notification.time_left > 0.0:
                 active_notifications.append(notification)
         self.notifications = active_notifications
+
+    def _update_tutorial(self, dt: float) -> None:
+        if self.tutorial_crisis_hint_timer > 0.0:
+            self.tutorial_crisis_hint_timer = max(0.0, self.tutorial_crisis_hint_timer - dt)
+
+    def _gameplay_hint(self) -> str | None:
+        tutorial_hint = self._tutorial_hint()
+        if tutorial_hint is not None:
+            return tutorial_hint
+        return self._context_hint()
+
+    def _tutorial_hint(self) -> str | None:
+        if not self.tutorial_opened_kanban:
+            return "Подойдите к канбану и нажмите E. Релиз сам себя не провалит."
+
+        if self.kanban_open and not self.tutorial_selected_task:
+            return "Выберите задачу слева. Верхняя обычно кричит громче всех."
+
+        if self.kanban_open and self.tutorial_selected_task and not self.tutorial_assigned_task:
+            return "Выберите сотрудника справа и нажмите Enter. Совпадение роли экономит нервы."
+
+        if self.tutorial_crisis_hint_timer > 0.0:
+            return "Если над сотрудником появится кризис, подойдите и нажмите E. PM опять нужен всем."
+
+        return None
+
+    def _context_hint(self) -> str | None:
+        if self.kanban_open:
+            return None
+
+        if self._nearby_crisis_employee() is not None:
+            return "E - помочь сотруднику. Кризис не рассосется сам, он же в проекте."
+
+        if self._player_is_near_kanban() and self._can_early_release():
+            return "R - досрочный релиз. Редкий случай, когда дедлайн можно победить."
+
+        if self._player_is_near_kanban():
+            return "E - открыть канбан. Там живут задачи и будущие компромиссы."
+
+        if self.task_manager.available_tasks():
+            return "Идите к канбану: есть задачи для назначения."
+
+        return "Ждите новые задачи и следите за ресурсами. Перед релизом тишина долго не живет."

@@ -8,6 +8,7 @@ from models.task_manager_model import TaskCounters, TaskManager
 from models.task_model import Task
 from views.crisis_dialog_view import CrisisDialogView
 from views.employee_view import EmployeeView
+from views.gameplay_hint_view import GameplayHintView
 from views.hud_view import HudView
 from views.kanban_view import KanbanView
 from views.notification_view import NotificationView
@@ -24,6 +25,7 @@ class PlayView:
         self.notification_view = NotificationView()
         self.kanban_view = KanbanView()
         self.crisis_dialog_view = CrisisDialogView()
+        self.gameplay_hint_view = GameplayHintView()
 
     def draw(
         self,
@@ -44,6 +46,7 @@ class PlayView:
         notifications: list[NotificationModel],
         task_counters: TaskCounters,
         early_release_available: bool,
+        gameplay_hint: str | None,
     ) -> None:
         self.office_map_view.draw(surface, office_map)
         self.employee_view.draw(surface, employees, task_manager, crisis_manager)
@@ -68,6 +71,8 @@ class PlayView:
                 active_crisis_dialog_id,
                 selected_crisis_option_index,
             )
+        if active_crisis_dialog_id is None:
+            self.gameplay_hint_view.draw(surface, gameplay_hint)
 
     def hit_test_kanban(self, pos: tuple[int, int]) -> tuple[str | None, int]:
         return self.kanban_view.hit_test(pos)

@@ -1,4 +1,5 @@
 from controllers.game_over_controller import GameOverController
+from controllers.intro_controller import IntroController
 from controllers.menu_controller import MenuController
 from controllers.play_controller import PlayController
 from controllers.result_controller import ResultController
@@ -12,6 +13,7 @@ class GameController:
         self.high_score = load_high_score(self.high_score_path)
         self.scenes = {
             "menu": MenuController(self),
+            "intro": IntroController(self),
             "play": PlayController(self),
             "game_over": GameOverController(self),
             "result": ResultController(self),
@@ -26,6 +28,9 @@ class GameController:
     def start_new_game(self) -> None:
         self.scenes["play"] = PlayController(self)
         self.change_scene("play")
+
+    def show_intro(self) -> None:
+        self.change_scene("intro")
 
     def show_result(self, result: GameResult) -> None:
         self.high_score = result.best_score
