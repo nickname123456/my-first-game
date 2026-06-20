@@ -11,9 +11,9 @@ class MenuController(BaseSceneController):
 
     def handle_event(self, event) -> None:
         if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
-            self.game_controller.change_scene("play")
+            self.game_controller.start_new_game()
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
             self.game_controller.quit()
 
     def draw(self, surface) -> None:
-        self.view.draw(surface)
+        self.view.draw(surface, self.game_controller.high_score)

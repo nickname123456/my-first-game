@@ -9,6 +9,7 @@ from models.mood_model import MoodSystem
 from models.office_map_model import OfficeMapModel
 from models.player_model import PlayerModel
 from models.project_stats_model import ProjectStatsModel
+from models.result_model import GameResult, determine_game_result
 from models.task_manager_model import TaskManager
 from settings import (
     CHARACTER_HITBOX_HEIGHT,
@@ -48,9 +49,14 @@ class PlayController(BaseSceneController):
         self.selected_employee_index = 0
         self.active_crisis_dialog_id: int | None = None
         self.selected_crisis_option_index = 0
+        self.finished = False
+        self.final_result: GameResult | None = None
         self.view = PlayView()
 
     def handle_event(self, event) -> None:
+        if self.finished:
+            return
+
         if self.active_crisis_dialog_id is not None:
             self._handle_crisis_dialog_event(event)
             return
@@ -69,6 +75,9 @@ class PlayController(BaseSceneController):
                     self._open_kanban()
 
     def update(self, dt: float) -> None:
+        if self.finished:
+            return
+
         self.project_stats.release_time_left = max(
             0.0,
             self.project_stats.release_time_left - dt,
@@ -87,6 +96,10 @@ class PlayController(BaseSceneController):
         if self.crisis_manager.get_crisis(self.active_crisis_dialog_id) is None:
             self.active_crisis_dialog_id = None
             self.selected_crisis_option_index = 0
+
+        self._check_final_result()
+        if self.finished:
+            return
 
         if not self.kanban_open and self.active_crisis_dialog_id is None:
             self.player_controller.handle_input(pygame.key.get_pressed(), dt)
@@ -357,3 +370,18 @@ class PlayController(BaseSceneController):
             if player_rect.colliderect(employee_rect):
                 return employee
         return None
+
+    def _check_final_result(self) -> None:
+        result = determine_game_result(
+            self.project_stats,
+            getattr(self.game_controller, "high_score_path", None),
+        )
+        if result is not None:
+            self._finish_game(result)
+
+    def _finish_game(self, result: GameResult) -> None:
+        self.finished = True
+        self.final_result = result
+        show_result = getattr(self.game_controller, "show_result", None)
+        if callable(show_result):
+            show_result(result)
