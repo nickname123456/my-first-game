@@ -15,6 +15,7 @@ class KanbanView:
         self.task_rects: list[pygame.Rect] = []
         self.employee_rects: list[pygame.Rect] = []
         self.assign_rect = pygame.Rect(0, 0, 0, 0)
+        self.early_release_rect = pygame.Rect(0, 0, 0, 0)
         self.close_rect = pygame.Rect(0, 0, 0, 0)
 
     def draw(
@@ -26,6 +27,7 @@ class KanbanView:
         selected_task_index: int,
         selected_employee_index: int,
         task_counters: TaskCounters,
+        early_release_available: bool,
     ) -> None:
         overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
         overlay.fill((0, 0, 0, 150))
@@ -64,7 +66,7 @@ class KanbanView:
             panel.top + 130,
         )
 
-        self.assign_rect = pygame.Rect(panel.left + 610, panel.bottom - 64, 250, 40)
+        self.assign_rect = pygame.Rect(panel.left + 610, panel.bottom - 112, 250, 40)
         can_assign = bool(
             selected_task is not None
             and employees
@@ -79,6 +81,18 @@ class KanbanView:
             self.font,
             self.assign_rect.x + 46,
             self.assign_rect.y + 9,
+        )
+
+        self.early_release_rect = pygame.Rect(panel.left + 610, panel.bottom - 64, 250, 40)
+        release_color = (73, 148, 111) if early_release_available else (72, 78, 88)
+        pygame.draw.rect(surface, release_color, self.early_release_rect, border_radius=4)
+        pygame.draw.rect(surface, COLORS["grid"], self.early_release_rect, 1, border_radius=4)
+        self._draw_text(
+            surface,
+            "Досрочный релиз: R",
+            self.font,
+            self.early_release_rect.x + 28,
+            self.early_release_rect.y + 9,
         )
 
         help_text = "Выберите задачу" if selected_task is None else "Выберите исполнителя"
@@ -115,6 +129,8 @@ class KanbanView:
             return "close", -1
         if self.assign_rect.collidepoint(pos):
             return "assign", -1
+        if self.early_release_rect.collidepoint(pos):
+            return "early_release", -1
         for index, rect in enumerate(self.task_rects):
             if rect.collidepoint(pos):
                 return "task", index

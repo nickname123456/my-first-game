@@ -44,6 +44,11 @@ def make_employee() -> EmployeeModel:
     )
 
 
+def spawn_all_tasks(manager: TaskManager) -> None:
+    while manager.spawn_task(current_time=0.0) is not None:
+        pass
+
+
 def test_priority_queue_ranks_urgent_task_higher_than_non_urgent() -> None:
     manager = TaskManager(initial_tasks=0)
     urgent = make_task(1, deadline=12)
@@ -302,3 +307,34 @@ def test_task_counters_split_new_active_successful_and_overdue() -> None:
     assert counters.active_count == 2
     assert counters.successful_count == 1
     assert counters.overdue_count == 1
+
+
+def test_early_release_is_blocked_until_full_task_pool_spawned() -> None:
+    manager = TaskManager(initial_tasks=0)
+    manager.spawn_task(current_time=0.0)
+    manager.tasks[0].status = TASK_STATUS_DONE
+
+    assert manager.can_release_early() is False
+    assert "появились не все задачи" in manager.early_release_blocker()
+
+
+def test_early_release_is_blocked_by_active_tasks() -> None:
+    manager = TaskManager(initial_tasks=0)
+    spawn_all_tasks(manager)
+    for task in manager.tasks:
+        task.status = TASK_STATUS_DONE
+    manager.tasks[0].status = TASK_STATUS_TODO
+
+    assert manager.can_release_early() is False
+    assert "незавершенных задач" in manager.early_release_blocker()
+
+
+def test_early_release_is_available_when_full_pool_is_finished() -> None:
+    manager = TaskManager(initial_tasks=0)
+    spawn_all_tasks(manager)
+    for index, task in enumerate(manager.tasks):
+        task.status = TASK_STATUS_DONE if index % 2 == 0 else TASK_STATUS_FAILED
+
+    assert manager.spawned_all_tasks() is True
+    assert manager.all_spawned_tasks_finished() is True
+    assert manager.can_release_early() is True

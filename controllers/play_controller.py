@@ -6,11 +6,17 @@ from models.employee_behavior_model import EmployeeBehaviorSystem
 from controllers.player_controller import PlayerController
 from models.employee_model import EmployeeModel
 from models.mood_model import MoodSystem
-from models.notification_model import NotificationModel
+from models.notification_model import NOTIFICATION_WARNING, NotificationModel
 from models.office_map_model import OfficeMapModel
 from models.player_model import PlayerModel
 from models.project_stats_model import ProjectStatsModel
-from models.result_model import GameResult, determine_game_result
+from models.result_model import (
+    GameResult,
+    build_game_result,
+    determine_game_result,
+    failure_reason,
+    release_failure_reason,
+)
 from models.task_manager_model import TaskManager
 from settings import (
     CHARACTER_HITBOX_HEIGHT,
@@ -75,6 +81,8 @@ class PlayController(BaseSceneController):
                     return
                 if self._player_is_near_kanban():
                     self._open_kanban()
+            elif event.key == pygame.K_r and self._player_is_near_kanban():
+                self._try_early_release()
 
     def update(self, dt: float) -> None:
         if self.finished:
@@ -128,6 +136,7 @@ class PlayController(BaseSceneController):
             self.selected_crisis_option_index,
             self.notifications,
             self.task_manager.task_counters(),
+            self._can_early_release(),
         )
 
     def _handle_kanban_event(self, event) -> None:
@@ -164,6 +173,8 @@ class PlayController(BaseSceneController):
                 )
             elif event.key == pygame.K_RETURN:
                 self._assign_selected_task()
+            elif event.key == pygame.K_r:
+                self._try_early_release()
 
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             hit_type, hit_index = self.view.hit_test_kanban(event.pos)
@@ -175,6 +186,8 @@ class PlayController(BaseSceneController):
                 self._assign_selected_task()
             elif hit_type == "assign":
                 self._assign_selected_task()
+            elif hit_type == "early_release":
+                self._try_early_release()
             elif hit_type == "close":
                 self.kanban_open = False
 
@@ -290,6 +303,43 @@ class PlayController(BaseSceneController):
             self._consume_model_notifications()
             self.active_crisis_dialog_id = None
             self.selected_crisis_option_index = 0
+
+    def _try_early_release(self) -> None:
+        self.task_manager.sync_stats(self.project_stats)
+        blocker = self._early_release_blocker()
+        if blocker is not None:
+            self.notifications.append(
+                NotificationModel(blocker, severity=NOTIFICATION_WARNING)
+            )
+            return
+
+        result = build_game_result(
+            self.project_stats,
+            True,
+            "Досрочный релиз успешен: все задачи закрыты до даты релиза",
+            getattr(self.game_controller, "high_score_path", None),
+            early_release=True,
+            release_duration=self.task_manager.release_duration,
+        )
+        self._finish_game(result)
+
+    def _can_early_release(self) -> bool:
+        return self._early_release_blocker() is None
+
+    def _early_release_blocker(self) -> str | None:
+        task_blocker = self.task_manager.early_release_blocker()
+        if task_blocker is not None:
+            return task_blocker
+
+        critical_reason = failure_reason(self.project_stats)
+        if critical_reason is not None:
+            return f"Досрочный релиз недоступен: {critical_reason}"
+
+        release_blocker = release_failure_reason(self.project_stats)
+        if release_blocker is not None:
+            return release_blocker
+
+        return None
 
     def _sorted_tasks(self):
         current_time = self.task_manager.elapsed_time(self.project_stats)

@@ -15,6 +15,7 @@ MIN_RELEASE_MORALE = 20
 MIN_RELEASE_QUALITY = 35
 MIN_RELEASE_CLIENT_TRUST = 35
 MAX_RELEASE_TECH_DEBT = 80
+EARLY_RELEASE_MAX_BONUS_RATE = 0.5
 
 
 @dataclass(frozen=True)
@@ -31,9 +32,13 @@ class GameResult:
     quality: int
     tech_debt: int
     client_trust: int
+    base_score: int = 0
+    early_release_bonus: int = 0
+    score_multiplier: float = 1.0
+    early_release: bool = False
 
 
-def calculate_final_score(stats: ProjectStatsModel) -> int:
+def calculate_base_score(stats: ProjectStatsModel) -> int:
     tasks_done_in_time = stats.tasks_done
     score = 0
     score += stats.tasks_done * 100
@@ -44,6 +49,30 @@ def calculate_final_score(stats: ProjectStatsModel) -> int:
     score += stats.client_trust * 4
     score -= stats.tech_debt * 6
     return max(0, int(score))
+
+
+def calculate_early_release_multiplier(
+    stats: ProjectStatsModel,
+    release_duration: float = 180.0,
+) -> float:
+    if release_duration <= 0:
+        return 1.0
+
+    time_ratio = max(0.0, min(1.0, stats.release_time_left / release_duration))
+    return 1.0 + time_ratio * EARLY_RELEASE_MAX_BONUS_RATE
+
+
+def calculate_final_score(
+    stats: ProjectStatsModel,
+    early_release: bool = False,
+    release_duration: float = 180.0,
+) -> int:
+    base_score = calculate_base_score(stats)
+    if not early_release:
+        return base_score
+
+    multiplier = calculate_early_release_multiplier(stats, release_duration)
+    return max(0, int(base_score * multiplier))
 
 
 def failure_reason(stats: ProjectStatsModel) -> str | None:
@@ -105,8 +134,16 @@ def build_game_result(
     won: bool,
     reason: str,
     high_score_path: str | Path | None = HIGHSCORE_FILE,
+    early_release: bool = False,
+    release_duration: float = 180.0,
 ) -> GameResult:
-    score = calculate_final_score(stats)
+    score_multiplier = 1.0
+    if early_release and won:
+        score_multiplier = calculate_early_release_multiplier(stats, release_duration)
+
+    base_score = calculate_base_score(stats)
+    score = max(0, int(base_score * score_multiplier))
+    early_release_bonus = max(0, score - base_score) if early_release and won else 0
 
     if high_score_path is None:
         best_score = score
@@ -129,6 +166,10 @@ def build_game_result(
         quality=stats.quality,
         tech_debt=stats.tech_debt,
         client_trust=stats.client_trust,
+        base_score=base_score,
+        early_release_bonus=early_release_bonus,
+        score_multiplier=score_multiplier,
+        early_release=early_release and won,
     )
 
 

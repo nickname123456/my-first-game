@@ -15,6 +15,8 @@ from models.result_model import (
     MIN_RELEASE_QUALITY,
     MIN_RELEASE_TASKS_DONE,
     TECH_DEBT_FAILURE_LIMIT,
+    build_game_result,
+    calculate_base_score,
     calculate_final_score,
     determine_game_result,
     load_high_score,
@@ -45,6 +47,73 @@ def test_final_score_never_becomes_negative() -> None:
     )
 
     assert calculate_final_score(stats) == 0
+
+
+def test_default_final_score_matches_base_score() -> None:
+    stats = ProjectStatsModel(
+        release_time_left=90,
+        budget=80,
+        morale=70,
+        quality=75,
+        tech_debt=10,
+        client_trust=85,
+        tasks_done=8,
+    )
+
+    assert calculate_final_score(stats) == calculate_base_score(stats)
+
+
+def test_early_release_score_uses_time_multiplier() -> None:
+    stats = ProjectStatsModel(
+        release_time_left=90,
+        budget=100,
+        morale=100,
+        quality=100,
+        tech_debt=0,
+        client_trust=100,
+        tasks_done=MIN_RELEASE_TASKS_DONE,
+    )
+    base_score = calculate_base_score(stats)
+
+    assert calculate_final_score(stats, early_release=True, release_duration=180) == int(
+        base_score * 1.25
+    )
+
+
+def test_early_release_score_multiplier_is_capped() -> None:
+    stats = ProjectStatsModel(
+        release_time_left=360,
+        budget=100,
+        morale=100,
+        quality=100,
+        tech_debt=0,
+        client_trust=100,
+        tasks_done=MIN_RELEASE_TASKS_DONE,
+    )
+    base_score = calculate_base_score(stats)
+
+    assert calculate_final_score(stats, early_release=True, release_duration=180) == int(
+        base_score * 1.5
+    )
+
+
+def test_regular_result_does_not_receive_early_release_bonus() -> None:
+    stats = ProjectStatsModel(
+        release_time_left=90,
+        budget=100,
+        morale=100,
+        quality=100,
+        tech_debt=0,
+        client_trust=100,
+        tasks_done=MIN_RELEASE_TASKS_DONE,
+    )
+
+    result = build_game_result(stats, True, "ok", high_score_path=None)
+
+    assert result.early_release is False
+    assert result.early_release_bonus == 0
+    assert result.score_multiplier == 1.0
+    assert result.score == result.base_score
 
 
 def test_new_high_score_is_saved_when_score_is_higher(tmp_path) -> None:

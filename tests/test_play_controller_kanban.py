@@ -5,16 +5,26 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 import pygame
 
 from controllers.play_controller import PlayController
-from models.task_model import TASK_STATUS_IN_PROGRESS, TASK_STATUS_QUEUED, TASK_STATUS_TODO
+from models.task_model import (
+    TASK_STATUS_DONE,
+    TASK_STATUS_IN_PROGRESS,
+    TASK_STATUS_QUEUED,
+    TASK_STATUS_TODO,
+)
 from settings import SCREEN_HEIGHT, SCREEN_WIDTH
 
 
 class DummyGameController:
     def __init__(self) -> None:
         self.quit_called = False
+        self.high_score_path = None
+        self.result = None
 
     def quit(self) -> None:
         self.quit_called = True
+
+    def show_result(self, result) -> None:
+        self.result = result
 
 
 class HitTestView:
@@ -38,6 +48,20 @@ def mouse_click() -> pygame.event.Event:
         pygame.MOUSEBUTTONDOWN,
         {"button": 1, "pos": (0, 0)},
     )
+
+
+def key_down(key: int) -> pygame.event.Event:
+    return pygame.event.Event(pygame.KEYDOWN, {"key": key})
+
+
+def finish_full_task_pool(controller: PlayController) -> None:
+    while controller.task_manager.spawn_task(current_time=0.0) is not None:
+        pass
+    for task in controller.task_manager.tasks:
+        task.status = TASK_STATUS_DONE
+        task.progress = 100.0
+    controller.project_stats.release_time_left = 90.0
+    controller.task_manager.sync_stats(controller.project_stats)
 
 
 def test_mouse_click_on_task_selects_task_without_assignment() -> None:
@@ -100,3 +124,38 @@ def test_draw_open_kanban_passes_task_counters_to_view() -> None:
     surface = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
 
     controller.draw(surface)
+
+
+def test_r_key_in_open_kanban_finishes_early_release() -> None:
+    controller = make_controller()
+    finish_full_task_pool(controller)
+
+    controller._handle_kanban_event(key_down(pygame.K_r))
+
+    assert controller.finished is True
+    assert controller.final_result is not None
+    assert controller.final_result.won is True
+    assert controller.final_result.early_release is True
+    assert controller.final_result.score > controller.final_result.base_score
+
+
+def test_early_release_button_finishes_game() -> None:
+    controller = make_controller()
+    finish_full_task_pool(controller)
+    controller.view = HitTestView("early_release", -1)
+
+    controller._handle_kanban_event(mouse_click())
+
+    assert controller.finished is True
+    assert controller.final_result is not None
+    assert controller.final_result.early_release is True
+
+
+def test_blocked_early_release_adds_notification_without_finishing() -> None:
+    controller = make_controller()
+
+    controller._handle_kanban_event(key_down(pygame.K_r))
+
+    assert controller.finished is False
+    assert controller.final_result is None
+    assert any("Досрочный релиз недоступен" in item.text for item in controller.notifications)

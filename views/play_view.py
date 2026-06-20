@@ -43,6 +43,7 @@ class PlayView:
         selected_crisis_option_index: int,
         notifications: list[NotificationModel],
         task_counters: TaskCounters,
+        early_release_available: bool,
     ) -> None:
         self.office_map_view.draw(surface, office_map)
         self.employee_view.draw(surface, employees, task_manager, crisis_manager)
@@ -58,6 +59,7 @@ class PlayView:
                 selected_task_index,
                 selected_employee_index,
                 task_counters,
+                early_release_available,
             )
         if active_crisis_dialog_id is not None:
             self.crisis_dialog_view.draw(

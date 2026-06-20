@@ -49,6 +49,16 @@ class ResultView:
             f"Доверие: {result.client_trust}, технический долг: {result.tech_debt}",
         ]
 
+        if result.early_release:
+            lines.insert(1, f"Базовый счет: {result.base_score}")
+            lines.insert(
+                2,
+                (
+                    f"Бонус за досрочный релиз: +{result.early_release_bonus} "
+                    f"(x{result.score_multiplier:.2f})"
+                ),
+            )
+
         y = 250
         for line in lines:
             self._draw_centered(surface, line, self.text_font, y)

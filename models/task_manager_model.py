@@ -117,6 +117,37 @@ class TaskManager:
             overdue_count=overdue_count,
         )
 
+    def total_task_count(self) -> int:
+        return len(self._task_pool)
+
+    def spawned_task_count(self) -> int:
+        return self._next_template_index
+
+    def spawned_all_tasks(self) -> bool:
+        return self.spawned_task_count() >= self.total_task_count()
+
+    def all_spawned_tasks_finished(self) -> bool:
+        return bool(self.tasks) and all(task.is_finished for task in self.tasks)
+
+    def can_release_early(self) -> bool:
+        return self.early_release_blocker() is None
+
+    def early_release_blocker(self) -> str | None:
+        if not self.spawned_all_tasks():
+            return (
+                "Досрочный релиз недоступен: появились не все задачи "
+                f"({self.spawned_task_count()}/{self.total_task_count()})"
+            )
+
+        active_count = len(self.active_tasks())
+        if active_count > 0:
+            return f"Досрочный релиз недоступен: незавершенных задач {active_count}"
+
+        if not self.all_spawned_tasks_finished():
+            return "Досрочный релиз недоступен: задачи еще не закрыты"
+
+        return None
+
     def elapsed_time(self, stats: ProjectStatsModel) -> float:
         return self.release_duration - stats.release_time_left
 
