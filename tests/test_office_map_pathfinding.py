@@ -12,6 +12,7 @@ EXPECTED_WORKPLACES = {
 
 
 def test_neighbors_return_only_walkable_cells() -> None:
+    """Проверяем, что метод neighbors возвращает только проходимые клетки и не включает стены и мебель"""
     office_map = OfficeMapModel()
 
     neighbors = office_map.neighbors((10, 4))
@@ -22,6 +23,7 @@ def test_neighbors_return_only_walkable_cells() -> None:
 
 
 def test_find_nearest_walkable_returns_adjacent_floor_for_desk() -> None:
+    """Проверяем, что если мы пытаемся встать на клетку с мебелью, то метод find_nearest_walkable возвращает соседнюю проходимую клетку"""
     office_map = OfficeMapModel()
 
     nearest = office_map.find_nearest_walkable((11, 4))
@@ -31,6 +33,7 @@ def test_find_nearest_walkable_returns_adjacent_floor_for_desk() -> None:
 
 
 def test_workplaces_are_marked_and_walkable() -> None:
+    """Проверяем, что целевые клетки для рабочих мест помечены как WORKPLACE и на них можно встать"""
     office_map = OfficeMapModel()
 
     assert office_map.workplace_targets == EXPECTED_WORKPLACES
@@ -41,6 +44,7 @@ def test_workplaces_are_marked_and_walkable() -> None:
 
 
 def test_desks_remain_blocked_next_to_workplaces() -> None:
+    """Проверяем, что клетки с мебелью, расположенные рядом с рабочими местами, остаются непроходимыми, чтобы сотрудники не могли встать на них"""
     office_map = OfficeMapModel()
 
     for cell in ((11, 4), (15, 4), (19, 4), (11, 9), (15, 9)):
@@ -50,6 +54,7 @@ def test_desks_remain_blocked_next_to_workplaces() -> None:
 
 
 def test_astar_can_reach_workplace() -> None:
+    """Проверяем, что алгоритм A* может найти путь от канбана до одного из рабочих мест, несмотря на препятствия в виде стен и мебели"""
     office_map = OfficeMapModel()
 
     path = astar_path(office_map, office_map.kanban_target, office_map.workplace_targets["backend"])

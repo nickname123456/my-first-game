@@ -133,8 +133,7 @@ class EmployeeBehaviorSystem:
         return status
 
     def _is_burned_out(self, context: EmployeeBehaviorContext) -> bool:
-        '''
-        проверяет, находится ли сотрудник в состоянии выгорания'''
+        '''проверяет, находится ли сотрудник в состоянии выгорания'''
         return context.employee.state == EMPLOYEE_STATE_BURNOUT or context.employee.mood == "burnout"
 
     def _needs_help(self, context: EmployeeBehaviorContext) -> bool:

@@ -54,11 +54,29 @@ BASE_TRANSITIONS: dict[str, dict[str, float]] = {
 
 
 def normalize_probabilities(probabilities: dict[str, float]) -> dict[str, float]:
-    cleaned = {mood: max(0.0, probabilities.get(mood, 0.0)) for mood in MOODS}
-    total = sum(cleaned.values())
-    if total <= 0.0:
-        return {MOOD_NORMAL: 1.0, MOOD_TIRED: 0.0, MOOD_STRESSED: 0.0, MOOD_BURNOUT: 0.0}
-    return {mood: value / total for mood, value in cleaned.items()}
+    '''oчищает и нормализует словарь вероятностей, гарантируя, что все значения неотрицательны и в сумме дают 1'''
+    cleaned_probabilities: dict[str, float] = {}
+
+    for mood in MOODS:
+        probability = probabilities.get(mood, 0.0)
+        cleaned_probabilities[mood] = max(0.0, probability)
+
+    total_probability = sum(cleaned_probabilities.values())
+
+    if total_probability <= 0.0:
+        return {
+            MOOD_NORMAL: 1.0,
+            MOOD_TIRED: 0.0,
+            MOOD_STRESSED: 0.0,
+            MOOD_BURNOUT: 0.0,
+        }
+
+    normalized_probabilities: dict[str, float] = {}
+
+    for mood, probability in cleaned_probabilities.items():
+        normalized_probabilities[mood] = probability / total_probability
+
+    return normalized_probabilities
 
 
 class MoodSystem:

@@ -23,14 +23,13 @@ from models.entities.task_model import (
 )
 
 
-MAX_ASSIGNMENTS_PER_EMPLOYEE = 3
-WORK_FATIGUE_PER_SECOND = 1.15
-QUEUE_FATIGUE_PER_TASK_PER_SECOND = 0.25
-MIN_FATIGUE_PROGRESS_MULTIPLIER = 0.65
-DEADLINE_ESTIMATE_MULTIPLIER = 2.4
-DEADLINE_TRAVEL_BUFFER = 28.0
-MISMATCH_TECH_DEBT_DRIFT_PER_SECOND = 0.45
-
+MAX_ASSIGNMENTS_PER_EMPLOYEE = 3 # максимальное количество задач, которые могут быть назначены одному сотруднику (включая текущую и в очереди)
+WORK_FATIGUE_PER_SECOND = 1.15 # скорость роста усталости при работе над задачей (в единицах усталости в секунду)
+QUEUE_FATIGUE_PER_TASK_PER_SECOND = 0.25 # скорость роста усталости за каждую задачу в очереди (в единицах усталости в секунду)
+MIN_FATIGUE_PROGRESS_MULTIPLIER = 0.65 # минимальный множитель прогресса усталости
+DEADLINE_ESTIMATE_MULTIPLIER = 2.4 # множитель оценки срока выполнения
+DEADLINE_TRAVEL_BUFFER = 28.0 # буфер времени на перемещение к сроку
+MISMATCH_TECH_DEBT_DRIFT_PER_SECOND = 0.45 # скорость drift'а технического долга при несоответствии навыков сотрудника
 
 @dataclass(frozen=True)
 class TaskTemplate:

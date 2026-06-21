@@ -26,17 +26,17 @@ CRISIS_CONFLICT = "conflict"
 CRISIS_INFRASTRUCTURE_OUTAGE = "infrastructure_outage"
 CRISIS_TECH_DEBT_ISSUE = "tech_debt_issue"
 
-CRISIS_ROLL_INTERVAL = 8.0
-CRISIS_GRACE_PERIOD = 25.0
-MAX_ACTIVE_CRISES = 1
-TEAM_CRISIS_COOLDOWN = 14.0
-EMPLOYEE_CRISIS_COOLDOWN = 30.0
-MIN_TASK_PROGRESS_FOR_CRISIS = 20.0
-PRD_GROWTH_PER_FAILED_ROLL = 0.45
-CRISIS_BAD_DECISION_RESOURCE_MULTIPLIER = 1.5
-CRISIS_BAD_DECISION_FATIGUE_MULTIPLIER = 1.4
-CRISIS_TIMEOUT_RESOURCE_MULTIPLIER = 1.8
-CRISIS_TIMEOUT_FATIGUE_MULTIPLIER = 1.6
+CRISIS_ROLL_INTERVAL = 8.0 # интервал между проявлениями кризисов (в секундах)
+CRISIS_GRACE_PERIOD = 25.0 # первые секунды проекта, в течение которых кризисы не возникают (в секундах)
+MAX_ACTIVE_CRISES = 1 # максимальное количество активных кризисов
+TEAM_CRISIS_COOLDOWN = 14.0 # время охлаждения команды после кризиса (в секундах)
+EMPLOYEE_CRISIS_COOLDOWN = 30.0 # время охлаждения сотрудника после кризиса (в секундах)
+MIN_TASK_PROGRESS_FOR_CRISIS = 20.0 # минимальный прогресс задачи для активации кризиса
+PRD_GROWTH_PER_FAILED_ROLL = 0.45 # рост вероятности при каждом неудачном ролле кризиса (в процентах от базовой вероятности)
+CRISIS_BAD_DECISION_RESOURCE_MULTIPLIER = 1.5 # множитель негативного эффекта на ресурсы при плохом решении кризиса
+CRISIS_BAD_DECISION_FATIGUE_MULTIPLIER = 1.4 # множитель негативного эффекта на усталость при плохом решении кризиса
+CRISIS_TIMEOUT_RESOURCE_MULTIPLIER = 1.8 # множитель негативного эффекта на ресурсы при истечении времени кризиса
+CRISIS_TIMEOUT_FATIGUE_MULTIPLIER = 1.6 # множитель негативного эффекта на усталость при истечении времени кризиса
 
 
 @dataclass(frozen=True)

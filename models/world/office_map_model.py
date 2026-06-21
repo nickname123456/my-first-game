@@ -47,6 +47,7 @@ class OfficeMapModel:
         return self.grid[grid_y][grid_x] in self.WALKABLE_TILES
 
     def neighbors(self, cell: tuple[int, int]) -> list[tuple[int, int]]:
+        """Отдает проходимые соседние клетки (по 4 направлениям) для данной клетки"""
         grid_x, grid_y = cell
         result = []
 
@@ -93,8 +94,8 @@ class OfficeMapModel:
     def world_to_grid(self, world_x: int | float, world_y: int | float) -> tuple[int, int]:
         return floor(world_x / self.tile_size), floor(world_y / self.tile_size)
 
-    # найти ближайшую точку, куда можно встать, если дано место, куда встать нельзя
     def find_nearest_walkable(self, start: tuple[int, int]) -> tuple[int, int] | None:
+        """найти ближайшую точку, куда можно встать, если дано место, куда встать нельзя"""
         # если стартовая точка уже проходимая, то и думать не надо
         if self.is_walkable(*start):
             return start
