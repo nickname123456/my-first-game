@@ -32,6 +32,9 @@ class GameController:
     def show_intro(self) -> None:
         self.change_scene("intro")
 
+    def show_menu(self) -> None:
+        self.change_scene("menu")
+
     def show_result(self, result: GameResult) -> None:
         self.high_score = result.best_score
         result_controller = self.scenes["result"]

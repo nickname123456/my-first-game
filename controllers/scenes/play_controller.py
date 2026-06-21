@@ -30,6 +30,9 @@ from views.scenes.play_view import PlayView
 
 
 TUTORIAL_CRISIS_HINT_TIME = 8.0
+PAUSE_ACTION_RESUME = "resume"
+PAUSE_ACTION_MAIN_MENU = "main_menu"
+PAUSE_ACTIONS = (PAUSE_ACTION_RESUME, PAUSE_ACTION_MAIN_MENU)
 
 
 class PlayController(BaseSceneController):
@@ -64,12 +67,18 @@ class PlayController(BaseSceneController):
         self.tutorial_selected_task = False
         self.tutorial_assigned_task = False
         self.tutorial_crisis_hint_timer = 0.0
+        self.paused = False
+        self.selected_pause_action_index = 0
         self.finished = False
         self.final_result: GameResult | None = None
         self.view = PlayView()
 
     def handle_event(self, event) -> None:
         if self.finished:
+            return
+
+        if self.paused:
+            self._handle_pause_event(event)
             return
 
         if self.active_crisis_dialog_id is not None:
@@ -82,7 +91,7 @@ class PlayController(BaseSceneController):
 
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
-                self.game_controller.quit()
+                self._open_pause()
             elif event.key == pygame.K_e:
                 if self._open_nearby_crisis_dialog():
                     return
@@ -92,7 +101,7 @@ class PlayController(BaseSceneController):
                 self._try_early_release()
 
     def update(self, dt: float) -> None:
-        if self.finished:
+        if self.finished or self.paused:
             return
 
         self.project_stats.release_time_left = max(
@@ -146,7 +155,49 @@ class PlayController(BaseSceneController):
             self.task_manager.task_counters(),
             self._can_early_release(),
             self._gameplay_hint(),
+            self.paused,
+            self.selected_pause_action_index,
         )
+
+    def _handle_pause_event(self, event) -> None:
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                self._resume_game()
+            elif event.key == pygame.K_UP:
+                self.selected_pause_action_index = self._move_selection(
+                    self.selected_pause_action_index,
+                    -1,
+                    len(PAUSE_ACTIONS),
+                )
+            elif event.key == pygame.K_DOWN:
+                self.selected_pause_action_index = self._move_selection(
+                    self.selected_pause_action_index,
+                    1,
+                    len(PAUSE_ACTIONS),
+                )
+            elif event.key == pygame.K_RETURN:
+                self._activate_pause_action(
+                    PAUSE_ACTIONS[self.selected_pause_action_index]
+                )
+        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            action = self.view.hit_test_pause(event.pos)
+            if action is not None:
+                self._activate_pause_action(action)
+
+    def _open_pause(self) -> None:
+        self.paused = True
+        self.selected_pause_action_index = 0
+
+    def _resume_game(self) -> None:
+        self.paused = False
+        self.selected_pause_action_index = 0
+
+    def _activate_pause_action(self, action: str) -> None:
+        if action == PAUSE_ACTION_RESUME:
+            self._resume_game()
+        elif action == PAUSE_ACTION_MAIN_MENU:
+            self.paused = False
+            self.game_controller.show_menu()
 
     def _handle_kanban_event(self, event) -> None:
         sorted_tasks = self._sorted_tasks()
