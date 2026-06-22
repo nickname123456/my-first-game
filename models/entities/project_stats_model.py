@@ -16,6 +16,7 @@ class ProjectStatsModel:
     tasks_active: int = 0
     active_crises: int = 0
 
+    # Пример DRY. Другие системы вызывают apply_changes и не повторяют ограничение значений от 0 до 100
     def apply_changes(
         self,
         budget: int = 0,

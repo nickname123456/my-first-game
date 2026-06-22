@@ -44,6 +44,9 @@ class GameController:
     def quit(self) -> None:
         self.game.quit()
 
+
+    # Пример Принципа подстановки Барбары Лисков
+    # Все сцены имеют одинаковый интерфейс и могут быть взаимозаменяемыми для контроллера
     def handle_event(self, event) -> None:
         self.current_scene.handle_event(event)
 

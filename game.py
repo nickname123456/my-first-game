@@ -13,6 +13,11 @@ class Game:
         self.running = True
         self.controller = GameController(self)
 
+
+    # Пример KISS
+    # Каждый кадр состоит из трёх очевидных этапов: 
+    # обработать события, обновить состояние и нарисовать результат. 
+    # Цикл не содержит игровую бизнес-логику и только координирует системы
     def run(self) -> None:
         while self.running:
             dt = self.clock.tick(FPS) / 1000

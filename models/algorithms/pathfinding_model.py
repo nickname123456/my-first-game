@@ -10,6 +10,10 @@ GridCell = tuple[int, int] # удобно обзывать клетку
 
 # A* не знает про OfficeMapModel
 # OfficeMapModel просто удовлетворяет нужному интерфейсу
+
+# Также это хороший пример принципа разделения интерфейса
+# A* требует от карты только два метода: neighbors и cell_cost,
+# и не зависит от других методов, которые могут быть в карте (например, отрисовки или управления ресурсами)
 class PathfindingGrid(Protocol):
     def neighbors(self, cell: GridCell) -> list[GridCell]:
         ...
@@ -28,6 +32,9 @@ def manhattan_distance(first: GridCell, second: GridCell) -> int:
     return abs(first[0] - second[0]) + abs(first[1] - second[1])
 
 
+# Пример принципа инверсии зависимостей
+# A* не зависит от конкретной реализации карты, 
+# а только от интерфейса PathfindingGrid, который может быть реализован по-разному
 def astar_path(grid: PathfindingGrid, start: GridCell, goal: GridCell) -> list[GridCell]:
     # стоим где надо - ниче не делаем
     if start == goal:
